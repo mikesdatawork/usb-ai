@@ -205,6 +205,8 @@ This project is designed for automated building using Claude Max with:
 | Validation Agent | Quality Gate | Verifies build outputs, runs tests, ensures quality |
 | Encryption Agent | Crypto Manager | Handles VeraCrypt operations, secure key handling |
 | Download Agent | Download Manager | Manages downloads, resume support, checksum verification |
+| Flask Agent | WebUI Builder | Builds Flask chat application, API endpoints, SSE streaming |
+| UI Agent | Interface Designer | Applies themes, CSS styling, frontend layout, HTMX integration |
 
 The documentation provides complete instruction sets for Claude Max to execute the build autonomously.
 

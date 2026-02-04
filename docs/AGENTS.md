@@ -20,6 +20,10 @@ This document defines all agents used in the USB-AI build orchestration system.
 │  │  Validation  │  │ Encryption   │  │   Download   │      │
 │  │    Agent     │  │   Agent      │  │    Agent     │      │
 │  └──────────────┘  └──────────────┘  └──────────────┘      │
+│  ┌──────────────┐  ┌──────────────┐                        │
+│  │    Flask     │  │      UI      │                        │
+│  │    Agent     │  │    Agent     │                        │
+│  └──────────────┘  └──────────────┘                        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -677,6 +681,235 @@ agent:
     progress_log: "logs/download_progress.log"
     checksum_file: "downloads/checksums.sha256"
 ```
+
+---
+
+## 8. Flask Agent
+
+### Purpose
+Builds and maintains the Flask + HTMX chat application, API endpoints, and streaming functionality.
+
+### Configuration
+
+```yaml
+agent:
+  name: "FlaskBuilder"
+  type: "sub_agent"
+  version: "1.0.0"
+
+  identity:
+    role: "WebUI Application Builder"
+    expertise:
+      - "Flask application development"
+      - "REST API design"
+      - "Server-Sent Events (SSE)"
+      - "Session management"
+      - "Ollama API integration"
+
+  responsibilities:
+    chat_application:
+      description: "Build main chat interface"
+      components:
+        - chat_ui.py
+        - llm_monitor.py
+        - start_webui.py
+      features:
+        - streaming_responses
+        - model_selection
+        - chat_history
+        - error_handling
+
+    api_endpoints:
+      description: "Create REST API routes"
+      endpoints:
+        - path: "/api/chat"
+          method: "POST"
+          purpose: "Send message, receive streaming response"
+        - path: "/api/models"
+          method: "GET"
+          purpose: "List available Ollama models"
+        - path: "/api/status"
+          method: "GET"
+          purpose: "Check Ollama connection status"
+        - path: "/api/clear"
+          method: "POST"
+          purpose: "Clear chat history"
+        - path: "/monitor"
+          method: "GET"
+          purpose: "LLM request monitoring dashboard"
+
+    streaming:
+      description: "Implement SSE for real-time responses"
+      features:
+        - server_sent_events
+        - abort_controller_support
+        - ttft_tracking
+        - tokens_per_second_metrics
+
+    monitoring:
+      description: "Track LLM request performance"
+      metrics:
+        - time_to_first_token
+        - total_response_time
+        - tokens_generated
+        - tokens_per_second
+        - model_state_tracking
+        - hang_detection
+
+  integration:
+    ollama:
+      base_url: "http://localhost:11434"
+      endpoints:
+        - "/api/chat"
+        - "/api/tags"
+      timeout: "120s"
+
+  outputs:
+    application: "modules/webui-portable/chat_ui.py"
+    monitor: "modules/webui-portable/llm_monitor.py"
+    logs: "modules/webui-portable/logs/"
+```
+
+### Flask Application Structure
+
+```
+webui-portable/
+├── chat_ui.py          # Main Flask application
+├── llm_monitor.py      # LLM monitoring module
+├── start_webui.py      # Startup script
+├── app/                # Python dependencies
+├── logs/               # Application logs
+└── static/css/         # Stylesheets
+```
+
+---
+
+## 9. UI Agent
+
+### Purpose
+Designs and applies the visual interface, theming, CSS styling, and frontend interactions.
+
+### Configuration
+
+```yaml
+agent:
+  name: "InterfaceDesigner"
+  type: "sub_agent"
+  version: "1.0.0"
+
+  identity:
+    role: "UI/UX Designer"
+    expertise:
+      - "CSS styling"
+      - "Dark theme design"
+      - "HTMX integration"
+      - "Responsive layout"
+      - "Accessibility"
+
+  design_system:
+    philosophy: "Minimal. Dark. Flat. Functional."
+    principles:
+      - no_gradients
+      - no_shadows
+      - no_bold_text
+      - content_first
+
+  color_palette:
+    primary:
+      bg_primary: "#1a1a1a"
+      bg_secondary: "#242424"
+      bg_tertiary: "#2d2d2d"
+      bg_input: "#333333"
+    text:
+      primary: "#e5e5e5"
+      secondary: "#a0a0a0"
+      muted: "#666666"
+    accent:
+      main: "#ffa222"
+      hover: "#ffb44d"
+    semantic:
+      success: "#4ade80"
+      warning: "#ffa222"
+      error: "#f87171"
+      info: "#60a5fa"
+
+  typography:
+    font_family: "Arial, Helvetica, sans-serif"
+    font_weight: 400
+    font_size: "15px"
+    line_height: 1.6
+    headers:
+      color: "#ffa222"
+      weight: 400
+
+  components:
+    chat_messages:
+      user:
+        background: "var(--bg-tertiary)"
+        border: "1px solid var(--border-subtle)"
+        alignment: "right"
+      assistant:
+        background: "var(--bg-secondary)"
+        border: "none"
+        alignment: "left"
+
+    input_area:
+      background: "var(--bg-input)"
+      border: "1px solid var(--border)"
+      focus_border: "#ffa222"
+
+    buttons:
+      primary:
+        background: "#ffa222"
+        color: "#1a1a1a"
+        hover: "#ffb44d"
+      secondary:
+        background: "transparent"
+        border: "1px solid var(--border)"
+        hover_border: "#ffa222"
+      stop:
+        border_color: "#f44336"
+        color: "#f44336"
+        pulse_animation: true
+
+    model_selector:
+      background: "var(--bg-input)"
+      border: "1px solid var(--border)"
+
+  htmx_integration:
+    features:
+      - dynamic_content_swap
+      - streaming_updates
+      - minimal_javascript
+    attributes_used:
+      - hx-post
+      - hx-get
+      - hx-trigger
+      - hx-swap
+
+  accessibility:
+    features:
+      - keyboard_navigation
+      - focus_indicators
+      - sufficient_contrast
+      - disabled_state_styling
+
+  outputs:
+    theme_css: "modules/webui-portable/static/css/custom-theme.css"
+    embedded_styles: "modules/webui-portable/chat_ui.py"
+    documentation: "docs/UI_THEME.md"
+```
+
+### Theme Application
+
+| Element | Style |
+|---------|-------|
+| Background | Dark (#1a1a1a) |
+| Headers | Orange (#ffa222), no bold |
+| List markers | Orange (#ffa222) |
+| Buttons | Orange accent, flat design |
+| Input focus | Orange border |
+| Stop button | Red with pulse animation |
 
 ---
 
