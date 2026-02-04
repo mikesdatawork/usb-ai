@@ -1,0 +1,298 @@
+/*
+ * USB-AI Dark Flat Theme
+ * Version: 1.0.0
+ * 
+ * Minimal dark flat design.
+ * Font: Arial/Helvetica
+ * Accent: #ffa222
+ * No bold text.
+ */
+
+:root {
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #242424;
+  --bg-tertiary: #2d2d2d;
+  --bg-input: #333333;
+  --text-primary: #e5e5e5;
+  --text-secondary: #a0a0a0;
+  --text-muted: #666666;
+  --accent: #ffa222;
+  --accent-hover: #ffb44d;
+  --border: #3d3d3d;
+  --border-subtle: #2a2a2a;
+}
+
+/* Base reset - no bold anywhere */
+* {
+  font-weight: 400 !important;
+}
+
+/* Typography */
+body {
+  font-family: Arial, Helvetica, sans-serif !important;
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* Headers - accent color, no bold */
+h1, h2, h3, h4, h5, h6,
+.text-2xl, .text-xl, .text-lg {
+  color: #ffa222 !important;
+  font-weight: 400 !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+}
+
+h1 { font-size: 28px; }
+h2 { font-size: 22px; }
+h3 { font-size: 18px; }
+h4 { font-size: 16px; }
+
+/* Remove bold from all text */
+strong, b, 
+.font-bold, .font-semibold, .font-medium {
+  font-weight: 400 !important;
+}
+
+/* List markers - accent color */
+ul, ol {
+  padding-left: 0;
+}
+
+ul li, ol li {
+  position: relative;
+  padding-left: 24px;
+  margin: 6px 0;
+}
+
+ul li::marker,
+ol li::marker {
+  color: #ffa222 !important;
+}
+
+/* Custom bullet styling */
+ul li::before {
+  content: "•";
+  position: absolute;
+  left: 8px;
+  color: #ffa222;
+}
+
+/* Nested bullets */
+ul ul li::before {
+  content: "◦";
+}
+
+ul ul ul li::before {
+  content: "▪";
+}
+
+/* Numbered list markers */
+ol {
+  counter-reset: item;
+}
+
+ol li {
+  counter-increment: item;
+}
+
+ol li::before {
+  content: counter(item) ".";
+  position: absolute;
+  left: 0;
+  color: #ffa222;
+  min-width: 20px;
+}
+
+/* Message containers */
+.message-content {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+/* Input area */
+textarea, input[type="text"] {
+  background: var(--bg-input) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  color: var(--text-primary) !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-size: 15px !important;
+}
+
+textarea:focus, input[type="text"]:focus {
+  outline: none !important;
+  border-color: #ffa222 !important;
+}
+
+::placeholder {
+  color: var(--text-muted) !important;
+}
+
+/* Buttons */
+button {
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-weight: 400 !important;
+  border-radius: 6px !important;
+}
+
+button.primary,
+button[type="submit"] {
+  background: #ffa222 !important;
+  color: #1a1a1a !important;
+  border: none !important;
+}
+
+button.primary:hover,
+button[type="submit"]:hover {
+  background: #ffb44d !important;
+}
+
+/* Sidebar */
+.sidebar, nav {
+  background: var(--bg-primary) !important;
+  border-color: var(--border-subtle) !important;
+}
+
+/* Model selector */
+select {
+  background: var(--bg-input) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 6px !important;
+  color: var(--text-primary) !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+}
+
+select:focus {
+  outline: none !important;
+  border-color: #ffa222 !important;
+}
+
+/* Code blocks */
+pre, code {
+  background: #0d0d0d !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 6px !important;
+  font-family: 'SF Mono', Monaco, 'Courier New', monospace !important;
+}
+
+pre {
+  padding: 16px !important;
+  overflow-x: auto;
+}
+
+code {
+  font-size: 13px !important;
+}
+
+/* Inline code */
+p code, li code {
+  background: var(--bg-tertiary) !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #ffa222;
+}
+
+/* Links */
+a {
+  color: #ffa222 !important;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #ffb44d !important;
+}
+
+/* Tables */
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th, td {
+  border: 1px solid var(--border) !important;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+th {
+  background: var(--bg-tertiary) !important;
+  color: #ffa222 !important;
+  font-weight: 400 !important;
+}
+
+/* Markdown rendered content */
+.prose h1, .prose h2, .prose h3,
+.prose h4, .prose h5, .prose h6 {
+  color: #ffa222 !important;
+  font-weight: 400 !important;
+}
+
+.prose ul li::marker,
+.prose ol li::marker {
+  color: #ffa222 !important;
+}
+
+.prose strong, .prose b {
+  font-weight: 400 !important;
+  color: var(--text-primary) !important;
+}
+
+/* Chat area */
+.chat-container {
+  background: var(--bg-primary) !important;
+}
+
+/* Remove any remaining bold */
+[class*="font-bold"],
+[class*="font-semibold"],
+[class*="font-medium"] {
+  font-weight: 400 !important;
+}
+
+/* Accent color for interactive elements */
+.active, .selected, [aria-selected="true"] {
+  color: #ffa222 !important;
+  border-color: #ffa222 !important;
+}
+
+/* Tooltips */
+[role="tooltip"] {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 6px !important;
+}
+
+/* Modal/Dialog */
+[role="dialog"] {
+  background: var(--bg-secondary) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+}
+
+/* Remove gradients and shadows */
+* {
+  box-shadow: none !important;
+  background-image: none !important;
+}
