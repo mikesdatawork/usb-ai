@@ -10,7 +10,7 @@ No cloud. No internet required. No data leaves your machine.
 
 USB-AI packages a complete local AI system onto a USB drive. Plug it into any computer with 16GB RAM, run the launcher, and you have a private AI assistant with a chat interface.
 
-The system uses Ollama for model inference and Open WebUI for the browser-based chat interface. Everything runs locally on the host machine. The USB drive contains the runtime, models, and configuration.
+The system uses Ollama for model inference and a lightweight Flask + HTMX chat interface. Everything runs locally on the host machine. The USB drive contains the runtime, models, and configuration.
 
 ---
 
@@ -35,11 +35,12 @@ The system follows modular design principles. Each component operates independen
 ```
 usb-ai/
 ├── modules/
-│   ├── ollama-portable/     # LLM inference runtime
-│   ├── webui-portable/      # Browser chat interface
-│   ├── models/              # AI model files
+│   ├── ollama-portable/     # LLM inference runtime (cross-platform binaries)
+│   ├── webui-portable/      # Flask + HTMX chat interface
+│   ├── models/              # AI model files (GGUF format)
 │   ├── launchers/           # Cross-platform start scripts
-│   └── config/              # Shared settings
+│   └── config/              # Shared settings (JSON)
+├── resources/               # Static assets (images, etc.)
 ├── scripts/                 # Build automation
 └── docs/                    # Documentation
 ```
@@ -49,7 +50,7 @@ usb-ai/
 Each module can be updated or replaced without affecting others:
 
 - **ollama-portable**: Replace binaries to update Ollama version
-- **webui-portable**: Swap Open WebUI version independently
+- **webui-portable**: Swap chat UI version independently
 - **models**: Add or remove models without touching runtime
 - **launchers**: Modify startup behavior in isolation
 - **config**: Centralized settings read by all modules
@@ -62,8 +63,8 @@ Each module can be updated or replaced without affecting others:
 |-------|-----------|------------|
 | Inference | LLM Engine | Ollama (Go) |
 | Models | Format | GGUF via llama.cpp |
-| Interface | Web UI | Open WebUI (Python/FastAPI) |
-| Frontend | Chat | Svelte |
+| Interface | Web UI | Flask + HTMX (Python) |
+| Frontend | Chat | HTMX (minimal JS) |
 | Automation | Scripts | Python 3.10+ |
 | Storage | Database | SQLite |
 
@@ -71,7 +72,7 @@ Each module can be updated or replaced without affecting others:
 
 **Ollama**: Single binary, no dependencies, cross-platform, simple API. Handles model management and inference.
 
-**Open WebUI**: Full-featured chat interface, works with Ollama out of the box, active development, good UX.
+**Flask + HTMX**: Lightweight chat interface, minimal dependencies, fast startup, full control over UI/UX.
 
 **Python for scripts**: Cross-platform without separate implementations per OS. Standard library covers most needs.
 
@@ -162,6 +163,8 @@ The chat interface uses a minimal dark flat theme:
 - **Text weight**: Normal only, no bold
 - **Style**: No gradients, no shadows, flat design
 
+![USB-AI Chat Interface](resources/images/screenshot_example.png)
+
 See docs/UI_THEME.md for complete CSS specifications.
 
 ---
@@ -188,9 +191,20 @@ See docs/UI_THEME.md for complete CSS specifications.
 This project is designed for automated building using Claude Max with:
 
 - **Plan Mode**: Structured multi-phase build process
-- **Agents**: Proactive, Self-Improvement, Browser, Build, Validation
 - **MCPs**: PlayWriter (token optimization), Project Memory (state persistence)
 - **Tasks**: GSD methodology for execution tracking
+
+### Build Agents
+
+| Agent | Role | Responsibility |
+|-------|------|----------------|
+| Build Orchestrator | Primary Coordinator | Manages state, delegates tasks, handles errors |
+| Proactive Agent | Resource Manager | Anticipates needs, pre-fetches resources, monitors space |
+| Self-Improvement Agent | Optimizer | Analyzes performance, identifies bottlenecks, suggests improvements |
+| Browser Agent | Resource Fetcher | Fetches external resources, verifies checksums, updates docs |
+| Validation Agent | Quality Gate | Verifies build outputs, runs tests, ensures quality |
+| Encryption Agent | Crypto Manager | Handles VeraCrypt operations, secure key handling |
+| Download Agent | Download Manager | Manages downloads, resume support, checksum verification |
 
 The documentation provides complete instruction sets for Claude Max to execute the build autonomously.
 
@@ -209,39 +223,66 @@ The documentation provides complete instruction sets for Claude Max to execute t
 ## Project Structure
 
 ```
-.
-├── CLAUDE.md                              # Claude Max instructions
+usb-ai/
+├── CLAUDE.md                              # Claude Max build instructions
 ├── README.md                              # This file
+├── LICENSE                                # MIT License
 ├── docs/
 │   ├── AGENTS.md                          # Agent definitions
 │   ├── BUILD_PROCESS.md                   # Build guide
-│   ├── MODELS.md                          # Model specs
+│   ├── MODELS.md                          # Model specifications
 │   ├── PLAN_MODE.md                       # AI plan-mode instructions
 │   ├── PRD.md                             # Product requirements
 │   ├── REFERENCES.md                      # Links and resources
 │   ├── SKILLS_TASKS_MCP.md                # Skills and MCP config
 │   ├── STYLE_GUIDES.md                    # Component standards
 │   └── UI_THEME.md                        # Theme specifications
+├── resources/
+│   └── images/
+│       └── screenshot_example.png         # UI screenshot
 ├── modules/
-│   ├── config/                            # Shared configuration
-│   ├── models/                            # AI model storage
-│   ├── ollama-portable/                   # LLM runtime
-│   └── webui-portable/                    # Chat interface
-│       └── static/css/custom-theme.css    # UI theme
+│   ├── config/
+│   │   ├── launcher.json                  # Launcher settings
+│   │   ├── system.json                    # System configuration
+│   │   └── user.json                      # User preferences
+│   ├── launchers/
+│   │   ├── start_linux.sh                 # Linux launcher
+│   │   ├── start_macos.command            # macOS launcher
+│   │   ├── start_windows.bat              # Windows launcher
+│   │   └── stop_all.sh                    # Shutdown script
+│   ├── models/
+│   │   ├── blobs/                         # Model binary data
+│   │   ├── config/
+│   │   │   └── models.json                # Model configuration
+│   │   └── manifests/                     # Ollama model manifests
+│   │       └── registry.ollama.ai/library/
+│   │           ├── dolphin-llama3/8b      # Dolphin-LLaMA3 8B
+│   │           ├── llama3.2/latest        # Llama 3.2 8B
+│   │           └── qwen2.5/14b            # Qwen 2.5 14B
+│   ├── ollama-portable/
+│   │   ├── bin/
+│   │   │   ├── darwin-amd64/              # macOS Intel binaries
+│   │   │   ├── darwin-arm64/              # macOS Apple Silicon
+│   │   │   ├── linux-amd64/               # Linux x64 binaries
+│   │   │   └── windows-amd64/             # Windows x64 binaries
+│   │   └── config/                        # Ollama configuration
+│   └── webui-portable/
+│       ├── chat_ui.py                     # Flask + HTMX chat app
+│       ├── llm_monitor.py                 # LLM monitoring module
+│       ├── app/                           # Python dependencies
+│       ├── data/                          # Runtime data
+│       ├── logs/                          # Application logs
+│       └── static/css/                    # Custom stylesheets
 └── scripts/
     ├── build/                             # Build automation
-    │   └── s001_setup_environment.py
     └── launchers/                         # Runtime scripts
-        ├── start.py
-        ├── stop.py
-        └── status.py
 ```
 
 ---
 
 ## How It Works
 
-1. **Build phase**: Download Ollama binaries, pull AI models, install Open WebUI, apply theme
+1. **Build phase**: Download Ollama binaries, pull AI models, set up Flask chat UI, apply theme
 2. **Copy to USB**: Transfer the built system to a USB drive
 3. **Run anywhere**: Plug USB into target machine, run start.py
 4. **Chat locally**: Browser opens to local web interface
@@ -287,7 +328,8 @@ MIT License
 ## Acknowledgments
 
 - Ollama - https://ollama.com
-- Open WebUI - https://github.com/open-webui/open-webui
+- Flask - https://flask.palletsprojects.com
+- HTMX - https://htmx.org
 - Eric Hartford / Cognitive Computations - Dolphin models
 - Meta AI - Llama models
 - Alibaba - Qwen models

@@ -1,0 +1,13 @@
+{
+  "auto_open_browser": true,
+  "startup_timeout_seconds": 60,
+  "health_check_interval": 5,
+  "ollama_module": "../ollama-portable",
+  "webui_module": "../webui-portable",
+  "models_module": "../models",
+  "ports": {
+    "ollama": 11434,
+    "webui": 3000
+  },
+  "default_model": "dolphin-llama3:8b"
+}

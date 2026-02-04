@@ -13,7 +13,7 @@ This document provides the complete step-by-step process to build a USB-AI syste
 |----------|---------|---------|-----------------|
 | Git | 2.30+ | Version control | `brew install git` / `apt install git` |
 | Python | 3.10+ | Scripting | `brew install python3` / `apt install python3` |
-| Node.js | 18+ | Open WebUI | `brew install node` / `apt install nodejs` |
+| Node.js | - | Not required | - |
 | Docker | 24+ | Optional WebUI | `brew install docker` |
 | VeraCrypt | 1.26+ | Encryption | Manual download |
 
@@ -451,16 +451,22 @@ kill $OLLAMA_PID 2>/dev/null || true
 
 ---
 
-## Phase 7: Install Open WebUI
+## Phase 7: Install Flask Chat UI
 
-### 7.1 Download Open WebUI
+### 7.1 Install Dependencies
 
 ```bash
-# Method 1: Using pip (recommended for portability)
-pip3 install open-webui --target "$ENCRYPTED_PATH/webui/python"
+# Install Flask and requests (minimal dependencies)
+pip3 install flask requests --target "$ENCRYPTED_PATH/webui/app"
+```
 
-# Method 2: Download release binary
-# Check: https://github.com/open-webui/open-webui/releases
+### 7.2 Deploy Chat UI
+
+The chat UI is a single Python file with embedded HTML/CSS templates.
+
+```bash
+# Copy the chat_ui.py from the project
+cp modules/webui-portable/chat_ui.py "$ENCRYPTED_PATH/webui/"
 
 # Create start script
 cat > "$ENCRYPTED_PATH/webui/start_webui.sh" << 'EOF'
@@ -468,40 +474,23 @@ cat > "$ENCRYPTED_PATH/webui/start_webui.sh" << 'EOF'
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Add to Python path
-export PYTHONPATH="$SCRIPT_DIR/python:$PYTHONPATH"
+export PYTHONPATH="$SCRIPT_DIR/app:$PYTHONPATH"
 
-# Set data directory
-export DATA_DIR="$SCRIPT_DIR/../data/webui"
-mkdir -p "$DATA_DIR"
-
-# Set Ollama URL
-export OLLAMA_BASE_URL="http://127.0.0.1:11434"
-
-# Start Open WebUI
-python3 -m open_webui.main --port 3000 --host 127.0.0.1
-
+# Start Flask Chat UI
+python3 "$SCRIPT_DIR/chat_ui.py" --port 3000 --host 127.0.0.1
 EOF
 
 chmod +x "$ENCRYPTED_PATH/webui/start_webui.sh"
 ```
 
-### 7.2 Configure Open WebUI
+### 7.3 Chat UI Features
 
-```bash
-# Create configuration
-mkdir -p "$ENCRYPTED_PATH/data/webui"
-
-cat > "$ENCRYPTED_PATH/config/webui_config.json" << 'EOF'
-{
-  "ollama_base_url": "http://127.0.0.1:11434",
-  "enable_signup": false,
-  "default_user_role": "admin",
-  "enable_community_sharing": false,
-  "enable_message_rating": true,
-  "enable_model_filter": false
-}
-EOF
-```
+- Model selection dropdown (fetches from Ollama API)
+- Streaming chat responses
+- Session-based chat history
+- Dark theme with #ffa222 orange accent
+- Connection status indicator
+- Clear chat button
 
 ---
 

@@ -46,12 +46,17 @@ class USBAILauncher:
     def _find_root(self) -> Path:
         """Locate USB-AI root directory."""
         script_dir = Path(__file__).parent.resolve()
-        
+
+        # scripts/launchers -> scripts -> root
+        if (script_dir.parent.parent / "modules").exists():
+            return script_dir.parent.parent
+        # scripts -> root (if moved)
         if (script_dir.parent / "modules").exists():
             return script_dir.parent
+        # direct (if script at root)
         if (script_dir / "modules").exists():
             return script_dir
-            
+
         log.error("Cannot locate USB-AI root directory")
         sys.exit(1)
         
@@ -160,36 +165,39 @@ class USBAILauncher:
         return self._wait_for_service(OLLAMA_PORT, "Ollama", 30)
         
     def start_webui(self) -> bool:
-        """Start Open WebUI."""
+        """Start USB-AI Chat UI (Flask + HTMX)."""
         webui_path = self.root_path / "modules" / "webui-portable"
-        
+        chat_ui = webui_path / "chat_ui.py"
+
         if self._check_port(WEBUI_PORT):
-            log.info("Open WebUI already running")
+            log.info("Chat UI already running")
             return True
-            
-        log.info("Starting Open WebUI...")
-        
+
+        if not chat_ui.exists():
+            log.error(f"Chat UI not found: {chat_ui}")
+            return False
+
+        log.info("Starting USB-AI Chat UI...")
+
         env = os.environ.copy()
-        env["OLLAMA_BASE_URL"] = f"http://127.0.0.1:{OLLAMA_PORT}"
-        env["DATA_DIR"] = str(webui_path / "data")
-        
+        env["PYTHONPATH"] = str(webui_path / "app")
+
         try:
             self.webui_process = subprocess.Popen(
                 [
-                    sys.executable, "-m", "open_webui.main",
+                    sys.executable, str(chat_ui),
                     "--port", str(WEBUI_PORT),
                     "--host", "127.0.0.1"
                 ],
-                cwd=str(webui_path / "app"),
                 env=env,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
         except Exception as e:
-            log.error(f"Failed to start Open WebUI: {e}")
+            log.error(f"Failed to start Chat UI: {e}")
             return False
-            
-        return self._wait_for_service(WEBUI_PORT, "Open WebUI", 30)
+
+        return self._wait_for_service(WEBUI_PORT, "Chat UI", 30)
         
     def open_browser(self):
         """Open browser to WebUI."""

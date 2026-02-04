@@ -1,0 +1,23 @@
+{
+  "default_model": "dolphin-llama3:8b",
+  "available_models": [
+    {
+      "name": "dolphin-llama3:8b",
+      "size_gb": 4.7,
+      "description": "General purpose, uncensored",
+      "installed": true
+    },
+    {
+      "name": "llama3.2:latest",
+      "size_gb": 2.0,
+      "description": "General purpose, balanced",
+      "installed": true
+    },
+    {
+      "name": "qwen2.5:14b",
+      "size_gb": 9.0,
+      "description": "High quality, complex tasks",
+      "installed": true
+    }
+  ]
+}

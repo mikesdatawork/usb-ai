@@ -417,7 +417,7 @@ agent:
 | Resource | URL | Purpose | Frequency |
 |----------|-----|---------|-----------|
 | Ollama releases | ollama.com/download | Get latest binary | Per build |
-| Open WebUI | github.com/open-webui | Get latest release | Per build |
+| Flask | pypi.org/flask | Get latest release | Per build |
 | VeraCrypt | veracrypt.io | Get latest installer | Per build |
 | Model info | ollama.com/library | Verify model specs | On demand |
 
@@ -538,10 +538,10 @@ test_cases:
     assertion: "response_contains_text"
     
   - id: "T005"
-    name: "WebUI starts successfully"
+    name: "Flask chat UI starts successfully"
     type: "service_check"
     target: "localhost:3000"
-    assertion: "http_200_within_30s"
+    assertion: "http_200_within_10s"
 ```
 
 ---

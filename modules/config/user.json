@@ -1,0 +1,5 @@
+{
+  "default_model": "dolphin-llama3:8b",
+  "auto_start_browser": true,
+  "theme": "dark"
+}

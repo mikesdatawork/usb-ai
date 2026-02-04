@@ -1,7 +1,9 @@
 # UI Theme Specifications
-## USB-AI Open WebUI Customization
+## USB-AI Flask + HTMX Chat Interface Theme
 
 This document defines the visual theme for the USB-AI chat interface.
+
+![USB-AI Chat Interface](../resources/images/screenshot_example.png)
 
 ---
 
@@ -400,7 +402,7 @@ p code, li code {
 
 ## Complete Theme CSS
 
-Save as `custom-theme.css` for Open WebUI injection:
+Save as `custom-theme.css` for Flask chat UI:
 
 ```css
 /* USB-AI Dark Flat Theme */
@@ -448,22 +450,21 @@ strong, b {
 
 ## Implementation
 
-### Open WebUI Custom CSS
+### Flask Chat UI Integration
 
-1. Navigate to Settings > Interface
-2. Find Custom CSS section
-3. Paste the theme CSS
-4. Save and refresh
-
-### File-based Override
-
-Place in Open WebUI data directory:
+The theme CSS is embedded directly in the chat_ui.py file.
+To modify, edit the CUSTOM_CSS variable in:
 
 ```
-data/
-└── static/
-    └── css/
-        └── custom-theme.css
+modules/webui-portable/chat_ui.py
+```
+
+### Standalone CSS File
+
+For reference, a standalone CSS file is at:
+
+```
+modules/webui-portable/static/css/custom-theme.css
 ```
 
 ---

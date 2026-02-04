@@ -29,7 +29,7 @@ project_memory:
     - "Target USB: 128GB minimum"
     - "Primary model: Dolphin-LLaMA3 8B"
     - "Encryption: VeraCrypt AES-256"
-    - "UI: Open WebUI"
+    - "UI: Flask + HTMX"
     - "Repo: github.com/mikesdatawork/usb-ai"
 ```
 
@@ -40,7 +40,7 @@ project_memory:
 | `usb_target_size` | 128GB | Critical |
 | `primary_model` | dolphin-llama3 | Critical |
 | `encryption_method` | veracrypt | Critical |
-| `ui_choice` | open-webui | Critical |
+| `ui_choice` | flask-htmx | Critical |
 | `github_repo` | mikesdatawork/usb-ai | Critical |
 | `build_status` | in_progress | Dynamic |
 | `current_phase` | varies | Dynamic |
@@ -370,32 +370,32 @@ Create model_selector.sh that:
 ## Phase 5: UI Setup
 
 ### Objectives
-- Install Open WebUI
+- Set up Flask + HTMX chat interface
 - Configure for portable operation
-- Set up auto-launch
+- Apply dark theme with orange accent
 
-### Why Open WebUI over AnythingLLM
-| Factor | Open WebUI | AnythingLLM |
-|--------|------------|-------------|
-| Stability | High | Medium |
-| Speed | Fast | Medium |
-| Size | ~1GB | ~2GB |
-| Features | Comprehensive | Comprehensive |
-| Docker-free option | Yes | Partial |
+### Why Flask + HTMX
+| Factor | Flask + HTMX | Open WebUI |
+|--------|--------------|------------|
+| Startup time | Fast (<2s) | Slow (30s+) |
+| Dependencies | Minimal | Heavy |
+| Size | ~10MB | ~1GB |
+| Customization | Full control | Limited |
+| Reliability | High | Variable |
 
 ### Installation
 ```bash
 # Using pip (portable)
-pip install open-webui --target ./webui
+pip install flask requests --target ./webui/app
 
-# Or standalone binary
-# Download from: https://github.com/open-webui/open-webui/releases
+# Single-file chat UI included in project
+# modules/webui-portable/chat_ui.py
 ```
 
 ### Configuration
 - Default port: 3000
-- Data directory: ./data
 - Ollama URL: http://localhost:11434
+- Theme: Dark (#1a1a1a) with orange accent (#ffa222)
 ```
 
 ### Phase 6: Launcher Scripts
@@ -440,7 +440,7 @@ pip install open-webui --target ./webui
 | T01 | Mount encrypted volume | Password prompt, successful mount |
 | T02 | Start Ollama | Server on port 11434 |
 | T03 | Load model | Model responds to prompt |
-| T04 | Open WebUI | Browser shows chat interface |
+| T04 | Chat UI | Browser shows chat interface |
 | T05 | Send message | AI responds correctly |
 | T06 | Switch model | New model loads and responds |
 | T07 | Graceful shutdown | All services stop, volume unmounts |

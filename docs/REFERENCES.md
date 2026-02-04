@@ -44,15 +44,15 @@ This document contains all external links, download URLs, and documentation refe
 
 **Model Library**: https://ollama.com/library
 
-### Open WebUI
+### Flask Chat UI
 
 | Method | URL/Command |
 |--------|-------------|
-| PyPI | `pip install open-webui` |
-| GitHub Releases | https://github.com/open-webui/open-webui/releases |
-| Docker | `ghcr.io/open-webui/open-webui:main` |
+| Flask | `pip install flask requests` |
+| HTMX CDN | https://unpkg.com/htmx.org@1.9.10 |
 
-**Repository**: https://github.com/open-webui/open-webui
+**Flask**: https://flask.palletsprojects.com
+**HTMX**: https://htmx.org
 
 ---
 
@@ -66,7 +66,8 @@ This document contains all external links, download URLs, and documentation refe
 | Ollama API Reference | https://github.com/ollama/ollama/blob/main/docs/api.md |
 | VeraCrypt Documentation | https://veracrypt.io/en/Documentation.html |
 | VeraCrypt Command Line | https://veracrypt.io/en/Command%20Line%20Usage.html |
-| Open WebUI Docs | https://docs.openwebui.com |
+| Flask Documentation | https://flask.palletsprojects.com/en/stable/ |
+| HTMX Documentation | https://htmx.org/docs/ |
 
 ### Model Documentation
 
@@ -95,7 +96,8 @@ This document contains all external links, download URLs, and documentation refe
 | Project | Repository | Purpose |
 |---------|------------|---------|
 | Ollama | https://github.com/ollama/ollama | LLM runtime |
-| Open WebUI | https://github.com/open-webui/open-webui | Chat interface |
+| Flask | https://github.com/pallets/flask | Web framework |
+| HTMX | https://github.com/bigskysoftware/htmx | Dynamic HTML |
 | VeraCrypt | https://github.com/veracrypt/VeraCrypt | Encryption |
 
 ### Related Projects
@@ -189,7 +191,7 @@ curl -X POST http://localhost:11434/api/generate \
 | Ollama not starting | https://github.com/ollama/ollama/issues |
 | VeraCrypt mount fails | https://veracrypt.io/en/FAQ.html |
 | Model too slow | https://github.com/ollama/ollama/blob/main/docs/faq.md |
-| Open WebUI errors | https://github.com/open-webui/open-webui/issues |
+| Flask/HTMX issues | https://github.com/pallets/flask/issues |
 
 ### Community Forums
 
@@ -209,7 +211,8 @@ curl -X POST http://localhost:11434/api/generate \
 |-----------|---------|--------------|
 | VeraCrypt | 1.26.14 | 2024-12 |
 | Ollama | Latest | Rolling |
-| Open WebUI | Latest | Rolling |
+| Flask | 3.0+ | Stable |
+| HTMX | 1.9.10 | Stable |
 | Dolphin-LLaMA3 | 2.9 | 2024-04 |
 | Llama 3.2 | 3.2 | 2024-09 |
 | Qwen2.5 | 2.5 | 2024-09 |
@@ -223,8 +226,8 @@ veracrypt --version
 # Ollama
 ollama --version
 
-# Open WebUI
-pip show open-webui
+# Flask
+pip show flask
 
 # Installed Models
 ollama list
@@ -237,7 +240,8 @@ ollama list
 | Component | License |
 |-----------|---------|
 | Ollama | MIT |
-| Open WebUI | MIT |
+| Flask | BSD-3 |
+| HTMX | BSD-2 |
 | VeraCrypt | Apache 2.0 + TrueCrypt |
 | Llama Models | Meta Llama License |
 | Qwen Models | Tongyi Qianwen License |
@@ -308,8 +312,8 @@ veracrypt --text /path/to/container.vc /mount/point
 # Unmount VeraCrypt container
 veracrypt -d /mount/point
 
-# Start Open WebUI
-python -m open_webui.main --port 3000
+# Start Flask Chat UI
+python chat_ui.py --port 3000
 ```
 
 ### Key URLs
@@ -320,7 +324,8 @@ python -m open_webui.main --port 3000
 | Ollama Downloads | https://ollama.com/download |
 | Model Library | https://ollama.com/library |
 | VeraCrypt Downloads | https://veracrypt.io/en/Downloads.html |
-| Open WebUI | https://github.com/open-webui/open-webui |
+| Flask Docs | https://flask.palletsprojects.com |
+| HTMX Docs | https://htmx.org |
 
 ---
 

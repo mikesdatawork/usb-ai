@@ -105,78 +105,54 @@ To update Ollama:
 ## Module: webui-portable
 
 ### Purpose
-Browser-based chat interface for Ollama.
+Browser-based chat interface for Ollama using Flask + HTMX.
 
 ### Directory Structure
 
 ```
 webui-portable/
 ├── app/
-│   └── (Open WebUI application)
-├── data/
-│   ├── uploads/
-│   ├── cache/
-│   └── webui.db
+│   └── (Flask dependencies)
+├── chat_ui.py           # Main chat application
 ├── static/
 │   └── css/
 │       └── custom-theme.css
-├── config/
-│   └── webui.json
-├── start.py
 └── README.md
-```
-
-### Configuration Schema
-
-```json
-{
-  "host": "127.0.0.1",
-  "port": 3000,
-  "ollama_url": "http://127.0.0.1:11434",
-  "data_dir": "./data",
-  "enable_signup": false,
-  "default_model": "dolphin-llama3:8b",
-  "theme": "custom-dark"
-}
 ```
 
 ### Style Rules
 
 | Aspect | Rule |
 |--------|------|
-| Framework | Open WebUI (Python/FastAPI) |
+| Framework | Flask + HTMX (Python) |
 | Port | Always 3000 |
-| Database | SQLite only, in data/ |
-| Theme | Custom dark flat (see UI_THEME.md) |
-| Auth | Disabled for local use |
+| Session | Server-side Flask session |
+| Theme | Dark flat with #ffa222 accent |
+| Auth | None (local use only) |
 
 ### Theme Requirements
 
 ```css
-/* Mandatory overrides */
-font-family: Arial, Helvetica, sans-serif;
-font-weight: 400;  /* Never bold */
-header-color: #ffa222;
-list-marker-color: #ffa222;
+/* Built into chat_ui.py */
+font-family: Arial, sans-serif;
 background: #1a1a1a;
+accent: #ffa222;
 ```
 
 ### Interface
 
 ```
 Input:  Browser on localhost:3000
-Output: HTML/JS application
+Output: HTML with HTMX dynamic updates
 Depends: ollama-portable (HTTP API)
-Config: webui.json
 ```
 
 ### Update Independence
 
-To update Open WebUI:
-1. Replace `app/` contents
-2. Preserve `data/` and `config/`
-3. Reapply custom-theme.css
-4. No other modules affected
+To update chat UI:
+1. Replace `chat_ui.py`
+2. Update Flask in `app/` if needed
+3. No other modules affected
 
 ---
 

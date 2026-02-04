@@ -100,11 +100,11 @@ A pre-configured USB drive containing:
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| UI-001 | Open WebUI chat interface | P0 |
+| UI-001 | Flask + HTMX chat interface | P0 |
 | UI-002 | Browser-based access | P0 |
-| UI-003 | Chat history persistence | P1 |
+| UI-003 | Chat history in session | P1 |
 | UI-004 | Model switching in UI | P1 |
-| UI-005 | Dark/Light theme | P2 |
+| UI-005 | Dark theme with orange accent | P0 |
 
 ### 4.4 Cross-Platform Support
 
@@ -145,7 +145,7 @@ A pre-configured USB drive containing:
 |-----------|--------------|--------------|
 | VeraCrypt overhead | 2GB | 2GB |
 | Ollama runtime | 500MB | 500MB |
-| Open WebUI | 1GB | 1GB |
+| Chat UI (Flask) | 50MB | 50MB |
 | Models | 25GB | 60GB |
 | Reserved/Free | 99.5GB | 192.5GB |
 
@@ -186,7 +186,7 @@ A pre-configured USB drive containing:
 ┌─────────────────────────────────────────────┐
 │              User Browser                    │
 ├─────────────────────────────────────────────┤
-│         Open WebUI (localhost:3000)          │
+│       Flask + HTMX UI (localhost:3000)       │
 ├─────────────────────────────────────────────┤
 │         Ollama API (localhost:11434)         │
 ├─────────────────────────────────────────────┤
@@ -201,7 +201,7 @@ A pre-configured USB drive containing:
 ### 7.2 Data Flow
 
 ```
-User Input → Browser → Open WebUI → Ollama API → Model Inference → Response
+User Input → Browser → Flask UI → Ollama API → Model Inference → Response
      ↑                                                                  │
      └──────────────────────────────────────────────────────────────────┘
 ```
@@ -218,7 +218,7 @@ User Input → Browser → Open WebUI → Ollama API → Model Inference → Res
 | 2. Encryption | Create VeraCrypt container | 15 min |
 | 3. Runtime | Install Ollama binaries | 10 min |
 | 4. Models | Download and verify models | 30-60 min |
-| 5. UI | Configure Open WebUI | 10 min |
+| 5. UI | Configure Flask chat UI | 5 min |
 | 6. Launchers | Create OS-specific scripts | 5 min |
 | 7. Testing | Validate all components | 15 min |
 | 8. Package | Final USB preparation | 10 min |
@@ -289,7 +289,8 @@ All phases automated via shell scripts with Claude Max orchestration.
 ### 12.2 References
 
 - Ollama Documentation: https://ollama.com/docs
-- Open WebUI: https://github.com/open-webui/open-webui
+- Flask: https://flask.palletsprojects.com
+- HTMX: https://htmx.org
 - VeraCrypt: https://veracrypt.io/en/Documentation.html
 - Hugging Face Models: https://huggingface.co/models
 

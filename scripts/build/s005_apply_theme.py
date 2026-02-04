@@ -1,4 +1,27 @@
-/* USB-AI Dark Flat Theme */
+#!/usr/bin/env python3
+"""
+s005_apply_theme.py
+
+Applies the custom dark flat theme to Open WebUI.
+Theme CSS is copied to the appropriate location.
+"""
+
+import logging
+import platform
+import shutil
+import sys
+from pathlib import Path
+
+__version__ = "1.0.0"
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%H:%M:%S"
+)
+log = logging.getLogger(__name__)
+
+THEME_CSS = '''/* USB-AI Dark Flat Theme */
 /* Version: 1.0.0 */
 /* Minimal. Dark. Flat. Functional. */
 
@@ -373,3 +396,173 @@ hr, [class*="divider"] {
   border-color: var(--border-subtle) !important;
   background: var(--border-subtle) !important;
 }
+'''
+
+
+def get_root_path() -> Path:
+    """Get USB-AI root directory."""
+    return Path(__file__).parent.parent.parent.resolve()
+
+
+def create_theme_file(css_dir: Path) -> bool:
+    """Create the custom theme CSS file."""
+    log.info("Creating custom theme CSS...")
+
+    css_dir.mkdir(parents=True, exist_ok=True)
+
+    theme_path = css_dir / "custom-theme.css"
+
+    try:
+        with open(theme_path, "w") as f:
+            f.write(THEME_CSS)
+        log.info(f"Created: {theme_path}")
+        return True
+
+    except Exception as e:
+        log.error(f"Failed to create theme file: {e}")
+        return False
+
+
+def find_webui_static(webui_path: Path) -> Path:
+    """Find Open WebUI static directory."""
+    possible_paths = [
+        webui_path / "app" / "open_webui" / "static",
+        webui_path / "app" / "static",
+        webui_path / "static",
+    ]
+
+    for path in possible_paths:
+        if path.exists():
+            return path
+
+    return webui_path / "static"
+
+
+def copy_to_webui(theme_path: Path, webui_path: Path) -> bool:
+    """Copy theme to Open WebUI static directory."""
+    log.info("Copying theme to Open WebUI...")
+
+    static_dir = find_webui_static(webui_path)
+    css_dir = static_dir / "css"
+    css_dir.mkdir(parents=True, exist_ok=True)
+
+    dest_path = css_dir / "custom-theme.css"
+
+    try:
+        shutil.copy2(theme_path, dest_path)
+        log.info(f"Copied to: {dest_path}")
+        return True
+
+    except Exception as e:
+        log.error(f"Failed to copy theme: {e}")
+        return False
+
+
+def create_theme_readme(css_dir: Path) -> bool:
+    """Create README for theme customization."""
+    readme_content = '''# USB-AI Custom Theme
+
+This directory contains the custom dark flat theme for Open WebUI.
+
+## Theme Specifications
+
+- Background: Dark (#1a1a1a)
+- Accent: Orange (#ffa222)
+- Font: Arial, Helvetica, sans-serif
+- Weight: Normal only (no bold text)
+- Style: Flat design (no gradients, no shadows)
+
+## Files
+
+- custom-theme.css: Main theme file
+
+## Customization
+
+Edit custom-theme.css to modify the theme.
+Re-run s005_apply_theme.py after changes.
+
+## Color Reference
+
+| Color | Hex | Usage |
+|-------|-----|-------|
+| Background Primary | #1a1a1a | Main background |
+| Background Secondary | #242424 | Cards, messages |
+| Background Tertiary | #2d2d2d | Hover states |
+| Text Primary | #e5e5e5 | Main text |
+| Text Secondary | #a0a0a0 | Secondary text |
+| Accent | #ffa222 | Headers, buttons, links |
+| Accent Hover | #ffb44d | Hover states |
+'''
+
+    readme_path = css_dir / "README.md"
+
+    try:
+        with open(readme_path, "w") as f:
+            f.write(readme_content)
+        log.info(f"Created: {readme_path}")
+        return True
+
+    except Exception as e:
+        log.error(f"Failed to create README: {e}")
+        return False
+
+
+def print_summary(success: bool, theme_path: Path):
+    """Print theme application summary."""
+    print("")
+    print("=" * 50)
+    print("        Theme Application Complete")
+    print("=" * 50)
+    print("")
+
+    if success:
+        print("Theme applied successfully!")
+        print("")
+        print("Theme specifications:")
+        print("  Background: #1a1a1a (dark)")
+        print("  Accent: #ffa222 (orange)")
+        print("  Font: Arial, Helvetica")
+        print("  Weight: Normal only")
+        print("  Style: Flat (no shadows/gradients)")
+        print("")
+        print(f"Theme file: {theme_path}")
+        print("")
+        print("Build complete! Run the launcher:")
+        print("  python scripts/launchers/start.py")
+    else:
+        print("Theme application incomplete. Check errors above.")
+
+    print("")
+    print("=" * 50)
+
+
+def main() -> int:
+    """Entry point."""
+    log.info("USB-AI Theme Application")
+    log.info(f"Platform: {platform.system()} {platform.machine()}")
+    print("")
+
+    root = get_root_path()
+    webui_path = root / "modules" / "webui-portable"
+    css_dir = webui_path / "static" / "css"
+
+    log.info(f"Root: {root}")
+    log.info(f"CSS dir: {css_dir}")
+    print("")
+
+    if not create_theme_file(css_dir):
+        return 1
+
+    theme_path = css_dir / "custom-theme.css"
+
+    copy_to_webui(theme_path, webui_path)
+
+    create_theme_readme(css_dir)
+
+    print_summary(True, theme_path)
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

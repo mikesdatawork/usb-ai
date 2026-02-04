@@ -22,5 +22,13 @@ Thumbs.db
 modules/models/blobs/
 modules/models/manifests/
 modules/webui-portable/data/
-modules/ollama-portable/bin/*/ollama*
+modules/webui-portable/app/
+modules/webui-portable/logs/
+modules/webui-portable/config/
+modules/ollama-portable/bin/
 *.log
+
+# Secrets
+.webui_secret_key
+*.secret
+*.key

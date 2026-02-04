@@ -516,56 +516,41 @@ phase:
 ```yaml
 phase:
   id: "phase_webui"
-  name: "Open WebUI Installation"
+  name: "Flask Chat UI Installation"
   order: 6
   depends_on: "phase_models"
-  
+
   objectives:
-    - "Install Open WebUI"
-    - "Configure for portable operation"
+    - "Install Flask dependencies"
+    - "Deploy chat_ui.py"
     - "Create startup script"
-    
+
   tasks:
     - task_id: "web_001"
-      name: "Install Open WebUI"
+      name: "Install Flask Dependencies"
       type: "command"
       commands:
-        - "pip3 install open-webui --target ${ENCRYPTED_PATH}/webui/python"
-      expected_duration: "5-10 minutes"
-      
+        - "pip3 install flask requests --target ${ENCRYPTED_PATH}/webui/app"
+      expected_duration: "1 minute"
+
     - task_id: "web_002"
+      name: "Deploy Chat UI"
+      type: "command"
+      commands:
+        - "cp modules/webui-portable/chat_ui.py ${ENCRYPTED_PATH}/webui/"
+
+    - task_id: "web_003"
       name: "Create WebUI Start Script"
       type: "file_create"
       path: "${ENCRYPTED_PATH}/webui/start_webui.sh"
       content: |
         #!/bin/bash
         SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-        
-        export PYTHONPATH="$SCRIPT_DIR/python:$PYTHONPATH"
-        export DATA_DIR="$SCRIPT_DIR/../data/webui"
-        export OLLAMA_BASE_URL="http://127.0.0.1:11434"
-        
-        mkdir -p "$DATA_DIR"
-        
-        python3 -m open_webui.main --port 3000 --host 127.0.0.1
+
+        export PYTHONPATH="$SCRIPT_DIR/app:$PYTHONPATH"
+
+        python3 "$SCRIPT_DIR/chat_ui.py" --port 3000 --host 127.0.0.1
       permissions: "755"
-      
-    - task_id: "web_003"
-      name: "Create WebUI Config"
-      type: "file_create"
-      path: "${ENCRYPTED_PATH}/config/webui_config.json"
-      content: |
-        {
-          "ollama_base_url": "http://127.0.0.1:11434",
-          "enable_signup": false,
-          "default_user_role": "admin"
-        }
-      
-    - task_id: "web_004"
-      name: "Create Data Directory"
-      type: "command"
-      commands:
-        - "mkdir -p ${ENCRYPTED_PATH}/data/webui"
 ```
 
 ### Phase 7: Launcher Creation
