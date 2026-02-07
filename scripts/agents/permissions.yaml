@@ -1,0 +1,123 @@
+# USB-AI Agent Permissions Configuration
+# Defines what each agent is allowed to do
+
+version: "1.0"
+
+# Permission Categories
+permission_categories:
+  llm:
+    description: "LLM model operations"
+    permissions:
+      - llm.quantize           # Quantize models to different levels
+      - llm.benchmark          # Run performance benchmarks
+      - llm.configure          # Modify Ollama configuration
+      - llm.download_models    # Download new models
+      - llm.delete_models      # Remove models
+      - llm.optimize_context   # Adjust context length
+      - llm.adjust_threads     # Modify thread count
+      - llm.gpu_offload        # Configure GPU layers
+      - llm.memory_limit       # Set memory limits
+      - llm.batch_size         # Adjust batch size
+
+  system:
+    description: "System operations"
+    permissions:
+      - system.read_config     # Read configuration files
+      - system.write_config    # Modify configuration files
+      - system.execute_scripts # Run shell scripts
+      - system.modify_env      # Change environment variables
+      - system.create_files    # Create new files
+      - system.delete_files    # Delete files
+      - system.network_access  # Access network resources
+
+  build:
+    description: "Build operations"
+    permissions:
+      - build.compile          # Compile code
+      - build.package          # Create packages
+      - build.validate         # Run validation
+      - build.deploy           # Deploy artifacts
+
+  agent:
+    description: "Agent management"
+    permissions:
+      - agent.spawn            # Create sub-agents
+      - agent.terminate        # Stop agents
+      - agent.communicate      # Inter-agent messaging
+      - agent.delegate         # Delegate tasks
+
+# Agent Permission Grants
+agents:
+  # LLM Optimization Agent - FULL PERMISSIONS
+  llm-optimizer:
+    name: "LLM Optimization Agent"
+    description: "Optimizes LLM models for USB operation"
+    permissions:
+      - llm.*                  # All LLM permissions
+      - system.read_config
+      - system.write_config
+      - system.execute_scripts
+      - system.modify_env
+      - agent.communicate
+
+  # Quantization Specialist
+  quantization-agent:
+    name: "Quantization Specialist"
+    permissions:
+      - llm.quantize
+      - llm.benchmark
+      - llm.configure
+      - system.read_config
+      - system.write_config
+
+  # Performance Agent
+  performance-agent:
+    name: "Performance Optimization Agent"
+    permissions:
+      - llm.optimize_context
+      - llm.adjust_threads
+      - llm.gpu_offload
+      - llm.memory_limit
+      - llm.batch_size
+      - llm.benchmark
+      - system.read_config
+      - system.write_config
+      - system.modify_env
+
+  # Build Agent
+  build-agent:
+    name: "Build System Agent"
+    permissions:
+      - build.*                # All build permissions
+      - system.read_config
+      - system.execute_scripts
+      - system.create_files
+
+  # WebUI Agent
+  webui-agent:
+    name: "WebUI Optimization Agent"
+    permissions:
+      - system.read_config
+      - system.write_config
+      - system.create_files
+
+  # Team Lead
+  team-lead:
+    name: "Team Lead Coordinator"
+    permissions:
+      - agent.*                # Full agent management
+      - system.read_config
+      - build.validate
+
+# Default permissions for new agents
+defaults:
+  permissions:
+    - system.read_config
+    - agent.communicate
+
+# Audit settings
+audit:
+  enabled: true
+  log_file: "logs/agents/permissions.jsonl"
+  log_denied: true
+  log_granted: true

@@ -13,12 +13,13 @@ import platform
 import signal
 import subprocess
 import sys
+import threading
 import time
 import webbrowser
 from pathlib import Path
 from typing import Optional
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -35,12 +36,13 @@ HEALTH_CHECK_INTERVAL = 2
 
 class USBAILauncher:
     """Manages USB-AI service lifecycle."""
-    
+
     def __init__(self):
         self.root_path = self._find_root()
         self.config = self._load_config()
         self.ollama_process: Optional[subprocess.Popen] = None
         self.webui_process: Optional[subprocess.Popen] = None
+        self.warmup_manager = None
         self.system = platform.system().lower()
         
     def _find_root(self) -> Path:
@@ -163,6 +165,39 @@ class USBAILauncher:
             return False
             
         return self._wait_for_service(OLLAMA_PORT, "Ollama", 30)
+
+    def start_warmup_manager(self) -> bool:
+        """Start the model warmup manager for zero cold start latency."""
+        try:
+            # Import warmup manager
+            sys.path.insert(0, str(self.root_path))
+            from scripts.performance.model_warmup import WarmupManager
+
+            log.info("Starting model warmup manager...")
+
+            # Get default model from config
+            default_model = self.config.get("default_model")
+
+            # Get keep_alive setting
+            keep_alive = self.config.get("keep_alive", "30m")
+
+            self.warmup_manager = WarmupManager(
+                ollama_host=f"http://127.0.0.1:{OLLAMA_PORT}",
+                keep_alive=keep_alive,
+                default_model=default_model
+            )
+
+            # Start warmup manager in background
+            self.warmup_manager.start()
+            log.info("Model warmup manager started")
+            return True
+
+        except ImportError as e:
+            log.warning(f"Model warmup not available: {e}")
+            return False
+        except Exception as e:
+            log.warning(f"Failed to start warmup manager: {e}")
+            return False
         
     def start_webui(self) -> bool:
         """Start USB-AI Chat UI (Flask + HTMX)."""
@@ -208,7 +243,15 @@ class USBAILauncher:
     def stop_all(self):
         """Stop all services."""
         log.info("Stopping services...")
-        
+
+        # Stop warmup manager first
+        if self.warmup_manager:
+            try:
+                self.warmup_manager.stop()
+                log.info("Warmup manager stopped")
+            except Exception as e:
+                log.warning(f"Error stopping warmup manager: {e}")
+
         if self.webui_process:
             self.webui_process.terminate()
             try:
@@ -216,7 +259,7 @@ class USBAILauncher:
             except subprocess.TimeoutExpired:
                 self.webui_process.kill()
             log.info("Open WebUI stopped")
-                
+
         if self.ollama_process:
             self.ollama_process.terminate()
             try:
@@ -236,12 +279,16 @@ class USBAILauncher:
         if not self.start_ollama():
             log.error("Failed to start Ollama")
             return 1
-            
+
+        # Start warmup manager to eliminate cold start latency
+        if self.config.get("enable_warmup", True):
+            self.start_warmup_manager()
+
         if not self.start_webui():
             log.error("Failed to start Open WebUI")
             self.stop_all()
             return 1
-            
+
         if self.config.get("auto_open_browser", True):
             self.open_browser()
             

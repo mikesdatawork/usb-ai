@@ -155,7 +155,7 @@ button.stop.active { animation: pulse 1s infinite; }
 
 .msg.assistant {
     background: #1a1a1a;
-    border: 1px solid #333;
+    border: none;
     align-self: flex-start;
 }
 
@@ -322,6 +322,14 @@ HTML = """<!DOCTYPE html>
                                     content += d.content;
                                     assistDiv.textContent = content;
                                     chat.scrollTop = chat.scrollHeight;
+                                }
+                                if (d.done && content) {
+                                    // Save assistant response to session
+                                    fetch('/api/save_response', {
+                                        method: 'POST',
+                                        headers: {'Content-Type': 'application/json'},
+                                        body: JSON.stringify({response: content})
+                                    });
                                 }
                                 if (d.error) {
                                     assistDiv.className = 'msg error';
@@ -555,6 +563,20 @@ def api_chat():
         yield f'data: {json.dumps({"done": True, "full_response": full if not error else ""})}\n\n'
 
     return Response(generate(), mimetype="text/event-stream")
+
+
+@app.route("/api/save_response", methods=["POST"])
+def api_save_response():
+    """Save assistant response to session history."""
+    data = request.get_json()
+    response = data.get("response", "").strip()
+
+    if response and "messages" in session:
+        session["messages"].append({"role": "assistant", "content": response})
+        session.modified = True
+        return jsonify({"status": "ok"})
+
+    return jsonify({"status": "no response to save"})
 
 
 @app.route("/monitor")

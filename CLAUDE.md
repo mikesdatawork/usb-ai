@@ -79,7 +79,180 @@ git worktree list
 
 ## Agent Configurations
 
-### 1. Proactive Agent
+### Multi-Agent Swarm Architecture
+
+```
+                    ┌─────────────────┐
+                    │   TEAM LEAD     │
+                    │  (Coordinator)  │
+                    └────────┬────────┘
+                             │
+        ┌────────────────────┼────────────────────┐
+        │                    │                    │
+        ▼                    ▼                    ▼
+┌───────────────┐  ┌───────────────┐  ┌───────────────┐
+│ LLM Engineer  │  │  Performance  │  │    Build      │
+│    Agent      │  │    Agent      │  │    Agent      │
+└───────────────┘  └───────────────┘  └───────────────┘
+        │                    │                    │
+        ▼                    ▼                    ▼
+┌───────────────┐  ┌───────────────┐  ┌───────────────┐
+│ Quantization  │  │   WebUI       │  │  Validation   │
+│  Specialist   │  │  Optimizer    │  │    Agent      │
+└───────────────┘  └───────────────┘  └───────────────┘
+```
+
+### 0. Team Lead Agent (Coordinator)
+
+```yaml
+agent_team_lead:
+  name: "TeamLead"
+  role: "Coordinate all sub-agents and orchestrate parallel workloads"
+  responsibilities:
+    - spawn_and_manage_sub_agents
+    - distribute_tasks_across_agents
+    - aggregate_results
+    - resolve_conflicts
+    - report_overall_progress
+  coordination:
+    max_parallel_agents: 5
+    communication: "async_message_queue"
+    status_file: "docs/AGENT_SWARM.md"
+  scripts:
+    - scripts/agents/coordinator.py
+```
+
+### 1. LLM Engineer Agent
+
+```yaml
+agent_llm_engineer:
+  name: "LLMEngineer"
+  role: "Optimize and configure LLM models for portable operation"
+  responsibilities:
+    - model_selection_optimization
+    - quantization_strategy
+    - context_length_tuning
+    - inference_optimization
+  sub_agents:
+    - QuantizationSpecialist
+  outputs:
+    - scripts/quantization/quantize_models.py
+    - modules/models/quantization_config.yaml
+```
+
+### 2. Quantization Specialist Agent
+
+```yaml
+agent_quantization:
+  name: "QuantizationSpecialist"
+  role: "Handle model quantization for optimal size/quality tradeoff"
+  capabilities:
+    - gguf_quantization: [Q4_K_M, Q5_K_M, Q6_K, Q8_0]
+    - calculate_storage_requirements
+    - memory_estimation
+    - auto_select_optimal_quantization
+  usb_profiles:
+    128GB:
+      max_model_size: "8B"
+      preferred_quant: "Q4_K_M"
+    256GB:
+      max_model_size: "14B"
+      preferred_quant: "Q5_K_M"
+  scripts:
+    - scripts/quantization/quantize_models.py
+    - scripts/quantization/benchmark.py
+```
+
+### 3. Performance Optimization Agent
+
+```yaml
+agent_performance:
+  name: "PerformanceOptimizer"
+  role: "Optimize system performance for USB operation"
+  responsibilities:
+    - ollama_configuration
+    - thread_optimization
+    - memory_management
+    - gpu_offloading
+    - startup_optimization
+  profiles:
+    minimal:
+      threads: 2
+      memory_limit: "4GB"
+      batch_size: 128
+    balanced:
+      threads: 4
+      memory_limit: "8GB"
+      batch_size: 256
+    performance:
+      threads: 8
+      memory_limit: "16GB"
+      batch_size: 512
+    max:
+      threads: "auto"
+      memory_limit: "auto"
+      batch_size: 1024
+  scripts:
+    - scripts/performance/optimize.py
+    - scripts/performance/system_check.py
+```
+
+### 4. Build System Agent
+
+```yaml
+agent_build:
+  name: "BuildMaster"
+  role: "Orchestrate parallel build operations"
+  responsibilities:
+    - parallel_task_execution
+    - dependency_management
+    - progress_reporting
+    - failure_recovery
+    - resumable_builds
+  state_machine:
+    states: [IDLE, INITIALIZING, BUILDING, TESTING, PACKAGING, COMPLETE, ERROR]
+  scripts:
+    - scripts/build/parallel_builder.py
+    - scripts/build/build_manifest.yaml
+    - scripts/build/validate_build.py
+```
+
+### 5. WebUI Optimizer Agent
+
+```yaml
+agent_webui:
+  name: "WebUIOptimizer"
+  role: "Optimize Flask + HTMX chat interface performance"
+  responsibilities:
+    - response_streaming_optimization
+    - connection_pooling
+    - static_asset_caching
+    - gzip_compression
+    - htmx_polling_optimization
+  outputs:
+    - modules/webui-portable/optimizations.py
+    - modules/webui-portable/config/performance.yaml
+    - docs/WEBUI_PERFORMANCE.md
+```
+
+### 6. Validation Agent
+
+```yaml
+agent_validation:
+  name: "QualityGate"
+  role: "Verify build outputs and ensure quality"
+  checks:
+    - file_integrity
+    - model_checksums
+    - encryption_verification
+    - cross_platform_scripts
+    - performance_benchmarks
+  report_format: "markdown"
+  outputs:
+    - docs/VALIDATION_REPORT.md
+```
+
+### 7. Proactive Agent
 
 ```yaml
 agent_proactive:
@@ -96,23 +269,7 @@ agent_proactive:
     - on_error
 ```
 
-### 2. Self-Improvement Agent
-
-```yaml
-agent_self_improvement:
-  name: "Optimizer"
-  role: "Analyze and improve build process"
-  behaviors:
-    - track_build_times
-    - identify_bottlenecks
-    - suggest_parallelization
-    - log_improvements
-  outputs:
-    - improvement_log.md
-    - performance_metrics.json
-```
-
-### 3. Browser Agent
+### 8. Browser Agent
 
 ```yaml
 agent_browser:
@@ -126,40 +283,36 @@ agent_browser:
   rate_limit: "10 requests/minute"
 ```
 
-### 4. Build Orchestrator Agent
+### Agent Communication Protocol
 
 ```yaml
-agent_build:
-  name: "BuildMaster"
-  role: "Primary build orchestration"
-  responsibilities:
-    - execute_build_phases
-    - coordinate_sub_agents
-    - handle_errors
-    - report_progress
-  state_machine:
-    states:
-      - IDLE
-      - INITIALIZING
-      - BUILDING
-      - TESTING
-      - PACKAGING
-      - COMPLETE
-      - ERROR
+agent_communication:
+  protocol: "async_message_queue"
+  message_format:
+    type: "[TASK|STATUS|RESULT|ERROR]"
+    from_agent: "agent_name"
+    to_agent: "agent_name|broadcast"
+    payload: {}
+    timestamp: "ISO8601"
+  status_updates:
+    frequency: "on_milestone"
+    aggregate_to: "docs/AGENT_STATUS.md"
 ```
 
-### 5. Validation Agent
+### Parallel Execution Rules
 
 ```yaml
-agent_validation:
-  name: "QualityGate"
-  role: "Verify build outputs"
-  checks:
-    - file_integrity
-    - model_checksums
-    - encryption_verification
-    - cross_platform_scripts
-  report_format: "markdown"
+parallel_execution:
+  enabled: true
+  max_concurrent: 5
+  task_distribution:
+    independent_tasks: "parallel"
+    dependent_tasks: "sequential"
+  load_balancing: "round_robin"
+  failure_handling:
+    strategy: "isolate_and_continue"
+    max_retries: 3
+    fallback: "sequential_execution"
 ```
 
 ---

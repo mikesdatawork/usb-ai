@@ -1,0 +1,369 @@
+# USB-AI Context Profiles Configuration
+# ======================================
+#
+# This file defines context profiles for optimizing inference latency.
+# Each profile is tuned for different use cases and response speed requirements.
+#
+# Profiles:
+#   - quick_response: Minimal context for ultra-fast responses
+#   - standard: Balanced speed and context for general use
+#   - extended: Extended context for multi-turn conversations
+#   - maximum: Maximum context for long documents and analysis
+#
+# Context Window Notes:
+#   - Smaller context = faster first token latency
+#   - Larger context = more conversation history retained
+#   - KV cache type affects memory usage (f16 > q8_0 > q4_0)
+#   - Sliding window helps manage very long conversations
+
+version: "1.0.0"
+
+# Default profile when not specified
+default_profile: standard
+
+profiles:
+  quick_response:
+    description: "Ultra-fast responses with minimal context (512 tokens)"
+    num_ctx: 512
+    num_batch: 128
+    num_predict: 256
+    system_prompt_budget: 128
+    kv_cache_type: "q4_0"
+    rope_frequency_base: 10000.0
+    rope_frequency_scale: 1.0
+    sliding_window: 0
+    sliding_window_overlap: 0
+
+    # Performance targets
+    target_latency_ms: 50
+    target_memory_mb: 64
+
+    # Use cases
+    use_cases:
+      - "Quick Q&A"
+      - "Simple commands"
+      - "Status checks"
+      - "One-word answers"
+
+    # Recommended system prompt
+    system_prompt_template: "Be concise. Answer in 1-2 sentences."
+
+  standard:
+    description: "Balanced speed and context for general use (2048 tokens)"
+    num_ctx: 2048
+    num_batch: 256
+    num_predict: 512
+    system_prompt_budget: 256
+    kv_cache_type: "q8_0"
+    rope_frequency_base: 10000.0
+    rope_frequency_scale: 1.0
+    sliding_window: 0
+    sliding_window_overlap: 0
+
+    target_latency_ms: 100
+    target_memory_mb: 256
+
+    use_cases:
+      - "General conversation"
+      - "Short coding tasks"
+      - "Explanations"
+      - "Writing assistance"
+
+    system_prompt_template: |
+      You are a helpful AI assistant. Provide clear and accurate responses.
+      Be concise but thorough.
+
+  extended:
+    description: "Extended context for longer conversations (4096 tokens)"
+    num_ctx: 4096
+    num_batch: 512
+    num_predict: 1024
+    system_prompt_budget: 512
+    kv_cache_type: "f16"
+    rope_frequency_base: 10000.0
+    rope_frequency_scale: 1.0
+    sliding_window: 4096
+    sliding_window_overlap: 1024
+
+    target_latency_ms: 200
+    target_memory_mb: 512
+
+    use_cases:
+      - "Multi-turn conversations"
+      - "Code review"
+      - "Document analysis"
+      - "Complex problem solving"
+
+    system_prompt_template: |
+      You are a helpful AI assistant with expertise in multiple domains.
+      Provide detailed and well-structured responses.
+      Consider the full context of the conversation.
+
+  maximum:
+    description: "Maximum context for long documents (8192+ tokens)"
+    num_ctx: 8192
+    num_batch: 1024
+    num_predict: 2048
+    system_prompt_budget: 1024
+    kv_cache_type: "f16"
+    rope_frequency_base: 10000.0
+    rope_frequency_scale: 1.0
+    sliding_window: 8192
+    sliding_window_overlap: 2048
+
+    target_latency_ms: 500
+    target_memory_mb: 1024
+
+    use_cases:
+      - "Long document analysis"
+      - "Book summaries"
+      - "Complex code refactoring"
+      - "Research synthesis"
+
+    system_prompt_template: |
+      You are an expert AI assistant capable of analyzing complex documents
+      and maintaining context across long conversations.
+      Provide comprehensive, well-organized responses.
+      Reference specific parts of the document when relevant.
+
+# Memory-based profile selection
+# Automatically select profile based on available memory
+memory_auto_select:
+  enabled: true
+  thresholds:
+    - max_memory_mb: 2048
+      profile: quick_response
+    - max_memory_mb: 4096
+      profile: standard
+    - max_memory_mb: 8192
+      profile: extended
+    - max_memory_mb: 999999
+      profile: maximum
+
+# Model-specific overrides
+# Some models perform better with specific settings
+model_overrides:
+  dolphin-llama3:
+    num_batch_multiplier: 1.0
+    context_efficiency: 0.95
+    recommended_ctx:
+      8b: 4096
+      latest: 4096
+
+  qwen2.5:
+    num_batch_multiplier: 1.2
+    context_efficiency: 0.92
+    recommended_ctx:
+      7b: 4096
+      14b: 8192
+
+  mistral:
+    num_batch_multiplier: 1.1
+    context_efficiency: 0.94
+    recommended_ctx:
+      7b: 4096
+
+  phi:
+    num_batch_multiplier: 0.8
+    context_efficiency: 0.90
+    recommended_ctx:
+      mini: 2048
+
+  llama3.2:
+    num_batch_multiplier: 1.0
+    context_efficiency: 0.95
+    recommended_ctx:
+      8b: 4096
+
+  codellama:
+    num_batch_multiplier: 1.1
+    context_efficiency: 0.93
+    # Code models benefit from larger context
+    recommended_ctx:
+      7b: 8192
+      13b: 16384
+
+# Conversation management
+conversation:
+  # Trigger context compression when this full
+  compression_threshold: 0.85
+
+  # Method for handling context overflow
+  overflow_strategy: "sliding_window"  # or "summarize", "truncate"
+
+  # Keep system prompt in context always
+  preserve_system_prompt: true
+
+  # Number of recent messages to always keep
+  keep_recent_messages: 4
+
+  # Summary configuration
+  summarization:
+    enabled: true
+    # Model to use for summarization (same model if null)
+    model: null
+    # Max tokens for summary
+    max_summary_tokens: 256
+    # Prompt template for summarization
+    prompt_template: |
+      Summarize the following conversation concisely, preserving key facts:
+      {conversation}
+      Summary:
+
+# Token estimation settings
+token_estimation:
+  # Default characters per token (varies by model)
+  default_chars_per_token: 3.5
+
+  # Model family specific ratios
+  model_ratios:
+    llama: 3.5
+    dolphin: 3.5
+    mistral: 3.8
+    qwen: 3.2
+    phi: 4.0
+    gemma: 3.6
+    codellama: 3.3
+    deepseek: 3.4
+
+  # Adjustment for code content
+  code_multiplier: 1.15
+
+  # Adjustment for heavily punctuated text
+  punct_threshold: 0.1
+  punct_multiplier: 1.5
+
+# Latency optimization settings
+latency_optimization:
+  # Prefill optimization - chunk large prompts
+  enable_prefill_chunking: true
+  prefill_chunk_size: 512
+
+  # Speculative decoding (if supported by model)
+  enable_speculative_decoding: false
+  draft_model: null
+
+  # KV cache optimization
+  enable_kv_cache_quantization: true
+  kv_cache_type_by_priority:
+    speed: "q4_0"
+    balanced: "q8_0"
+    quality: "f16"
+
+  # Flash attention settings
+  flash_attention:
+    enabled: true
+    # Use flash attention when context exceeds this
+    threshold_tokens: 1024
+
+# Prompt templates for efficiency
+# These are optimized for minimal token usage while maintaining quality
+efficient_prompts:
+  # Minimal system prompts for each use case
+  chat:
+    minimal: "You are a helpful assistant."
+    standard: "You are a helpful AI assistant. Provide clear, concise responses."
+    full: |
+      You are a helpful AI assistant. Provide clear and accurate responses.
+      Be concise but thorough. Ask clarifying questions when needed.
+
+  coding:
+    minimal: "You are a code assistant."
+    standard: "You are an expert programmer. Write clean, efficient code."
+    full: |
+      You are an expert programming assistant. Write clean, efficient,
+      well-documented code. Explain your approach when helpful.
+      Follow best practices and security guidelines.
+
+  analysis:
+    minimal: "Analyze the following."
+    standard: "Analyze this content. Be thorough but concise."
+    full: |
+      You are an analytical assistant. Provide detailed analysis with
+      clear structure. Support conclusions with evidence from the content.
+
+# Batch size recommendations based on context
+batch_size_by_context:
+  # Smaller context = can use larger batch for speed
+  512: 256
+  1024: 256
+  2048: 256
+  4096: 512
+  8192: 512
+  16384: 1024
+  32768: 2048
+
+# num_predict recommendations based on use case
+predict_by_use_case:
+  quick_qa: 128
+  chat: 512
+  coding: 1024
+  analysis: 2048
+  document: 4096
+
+# Hardware-specific adjustments
+hardware_adjustments:
+  # Apple Silicon optimizations
+  apple_silicon:
+    applies_to:
+      platform: darwin
+      architecture: arm64
+    adjustments:
+      kv_cache_type: "f16"  # Metal handles f16 well
+      enable_prefill_chunking: false  # Metal is efficient
+
+  # Low memory systems
+  low_memory:
+    applies_to:
+      max_ram_gb: 8
+    adjustments:
+      default_profile: quick_response
+      kv_cache_type: "q4_0"
+      sliding_window: 1024
+      sliding_window_overlap: 256
+
+  # High memory systems
+  high_memory:
+    applies_to:
+      min_ram_gb: 32
+    adjustments:
+      default_profile: extended
+      kv_cache_type: "f16"
+      sliding_window: 16384
+      sliding_window_overlap: 4096
+
+# Environment variable mappings for Ollama
+ollama_env_mapping:
+  OLLAMA_NUM_CTX: "num_ctx"
+  OLLAMA_NUM_BATCH: "num_batch"
+  OLLAMA_FLASH_ATTENTION: "flash_attention.enabled"
+
+# Performance benchmarks (reference values)
+# These help calibrate expectations
+benchmarks:
+  # Tokens per second by profile (reference hardware: 8-core CPU, 16GB RAM)
+  reference_hardware:
+    cpu_cores: 8
+    ram_gb: 16
+    gpu: false
+
+  tokens_per_second:
+    quick_response:
+      prompt_processing: 200
+      generation: 30
+    standard:
+      prompt_processing: 150
+      generation: 25
+    extended:
+      prompt_processing: 100
+      generation: 20
+    maximum:
+      prompt_processing: 50
+      generation: 15
+
+  # Time to first token (ms) by profile
+  time_to_first_token:
+    quick_response: 50
+    standard: 100
+    extended: 200
+    maximum: 500

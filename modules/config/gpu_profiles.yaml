@@ -1,0 +1,430 @@
+# USB-AI GPU Acceleration Profiles Configuration
+# ==============================================
+#
+# This file defines GPU acceleration profiles for USB-AI optimization.
+# Each profile is tuned for different GPU configurations and use cases.
+#
+# Profiles:
+#   - full_offload: All model layers on GPU for maximum performance
+#   - hybrid:       Split CPU/GPU based on available VRAM
+#   - cpu_only:     No GPU, optimized CPU inference with AVX
+#   - auto:         Automatically detect and configure based on hardware
+#
+# Usage:
+#   python scripts/performance/gpu_optimizer.py --profile auto
+#   python scripts/performance/gpu_optimizer.py --profile full_offload
+#
+
+version: "1.0.0"
+
+# Default profile when not specified
+default_profile: auto
+
+profiles:
+  full_offload:
+    description: "All layers on GPU for maximum performance"
+    enabled: true
+    gpu_layers: 99
+
+    requirements:
+      min_vram_gb: 8
+      recommended_vram_gb: 16
+      description: "Requires sufficient VRAM to hold entire model"
+
+    settings:
+      batch_size: 1024
+      flash_attention: true
+      cuda_graphs: true
+      kv_cache_type: "f16"
+      low_vram_mode: false
+      mmap: true
+      mlock: true
+
+    # Platform-specific optimizations
+    nvidia:
+      cuda_graphs: true
+      tensorrt_hints: true
+      compute_mode: "exclusive_process"
+
+    amd:
+      hip_visible_devices: "0"
+      hsa_override_gfx_version: "10.3.0"
+
+    apple:
+      metal_async: true
+      unified_memory_optimization: true
+
+    recommended_models:
+      - "dolphin-llama3:8b"
+      - "llama3.2:8b"
+      - "mistral:7b"
+      - "qwen2.5:7b"
+
+    performance_expectations:
+      tokens_per_second: "40-100+ depending on GPU"
+      first_token_latency_ms: "<100"
+      memory_efficiency: "high"
+
+  hybrid:
+    description: "Split CPU/GPU based on available VRAM"
+    enabled: true
+    gpu_layers: auto
+
+    requirements:
+      min_vram_gb: 2
+      recommended_vram_gb: 6
+      description: "Works with limited VRAM by offloading some layers to CPU"
+
+    settings:
+      batch_size: 512
+      flash_attention: true
+      cuda_graphs: false
+      kv_cache_type: "f16"
+      low_vram_mode: true
+      mmap: true
+      mlock: false
+
+    # VRAM thresholds for layer distribution
+    vram_thresholds:
+      - min_vram_gb: 2
+        max_vram_gb: 4
+        gpu_layers: 10
+        recommended_model_size: "3B"
+
+      - min_vram_gb: 4
+        max_vram_gb: 6
+        gpu_layers: 20
+        recommended_model_size: "7B"
+
+      - min_vram_gb: 6
+        max_vram_gb: 8
+        gpu_layers: 30
+        recommended_model_size: "8B"
+
+      - min_vram_gb: 8
+        max_vram_gb: 12
+        gpu_layers: 40
+        recommended_model_size: "13B"
+
+      - min_vram_gb: 12
+        max_vram_gb: 16
+        gpu_layers: 50
+        recommended_model_size: "14B"
+
+      - min_vram_gb: 16
+        max_vram_gb: 24
+        gpu_layers: 70
+        recommended_model_size: "33B"
+
+    nvidia:
+      cuda_graphs: false
+      memory_pool: "async"
+
+    amd:
+      hip_force_dev_mem: true
+
+    apple:
+      metal_async: true
+      low_power_mode: false
+
+    recommended_models:
+      - "phi3:mini"
+      - "gemma2:2b"
+      - "dolphin-llama3:8b"
+
+    performance_expectations:
+      tokens_per_second: "15-50 depending on GPU/CPU split"
+      first_token_latency_ms: "100-300"
+      memory_efficiency: "balanced"
+
+  cpu_only:
+    description: "No GPU, optimized CPU inference with SIMD"
+    enabled: false
+    gpu_layers: 0
+
+    requirements:
+      min_cores: 4
+      recommended_cores: 8
+      min_ram_gb: 8
+      avx2_required: true
+      description: "Optimized for modern CPUs with AVX2/AVX-512"
+
+    settings:
+      batch_size: 256
+      flash_attention: false
+      cuda_graphs: false
+      kv_cache_type: "f32"
+      low_vram_mode: false
+      mmap: true
+      mlock: true
+      numa: true
+
+    # CPU-specific optimizations
+    cpu_optimizations:
+      thread_ratio: 0.75
+      thread_min: 2
+      thread_max: 16
+      priority: "high"
+
+    # SIMD optimization levels
+    simd_settings:
+      avx512:
+        enabled: true
+        batch_size: 512
+        vector_width: 512
+
+      avx2:
+        enabled: true
+        batch_size: 256
+        vector_width: 256
+
+      sse4:
+        enabled: true
+        batch_size: 128
+        vector_width: 128
+
+    recommended_models:
+      - "tinyllama:1.1b"
+      - "phi3:mini"
+      - "gemma2:2b"
+      - "dolphin-llama3:8b-q4_0"
+
+    performance_expectations:
+      tokens_per_second: "5-20 depending on CPU"
+      first_token_latency_ms: "500-2000"
+      memory_efficiency: "good"
+
+  auto:
+    description: "Automatically detect and configure based on hardware"
+    enabled: true
+    gpu_layers: auto
+
+    # Auto-detection rules
+    detection_rules:
+      # High-end GPU (16GB+ VRAM)
+      - condition:
+          vram_gb_min: 16
+        apply_profile: "full_offload"
+        override:
+          flash_attention: true
+          cuda_graphs: true
+          batch_size: 2048
+
+      # Mid-range GPU (8-16GB VRAM)
+      - condition:
+          vram_gb_min: 8
+          vram_gb_max: 16
+        apply_profile: "full_offload"
+        override:
+          flash_attention: true
+          cuda_graphs: true
+          batch_size: 1024
+
+      # Entry-level GPU (4-8GB VRAM)
+      - condition:
+          vram_gb_min: 4
+          vram_gb_max: 8
+        apply_profile: "hybrid"
+        override:
+          gpu_layers: 35
+          flash_attention: true
+          cuda_graphs: false
+
+      # Low VRAM GPU (2-4GB)
+      - condition:
+          vram_gb_min: 2
+          vram_gb_max: 4
+        apply_profile: "hybrid"
+        override:
+          gpu_layers: 15
+          flash_attention: false
+          low_vram_mode: true
+
+      # Apple Silicon (unified memory)
+      - condition:
+          platform: darwin
+          architecture: arm64
+        apply_profile: "full_offload"
+        override:
+          gpu_layers: 99
+          flash_attention: true
+          mlock: false
+
+      # No GPU detected
+      - condition:
+          has_gpu: false
+        apply_profile: "cpu_only"
+        override:
+          numa: true
+
+    settings:
+      batch_size: 512
+      flash_attention: auto
+      cuda_graphs: auto
+      kv_cache_type: auto
+      low_vram_mode: auto
+      mmap: true
+      mlock: auto
+
+# VRAM requirements by model size and quantization
+# Used for automatic layer calculation in hybrid mode
+vram_requirements:
+  # Model size -> Quantization -> VRAM needed (GB)
+  "1B":
+    f16: 2.0
+    q8_0: 1.0
+    q4_k_m: 0.7
+    q4_0: 0.6
+
+  "3B":
+    f16: 6.0
+    q8_0: 3.0
+    q4_k_m: 2.0
+    q4_0: 1.8
+
+  "7B":
+    f16: 14.0
+    q8_0: 7.0
+    q4_k_m: 4.5
+    q4_0: 4.0
+
+  "8B":
+    f16: 16.0
+    q8_0: 8.0
+    q4_k_m: 5.0
+    q4_0: 4.5
+
+  "13B":
+    f16: 26.0
+    q8_0: 13.0
+    q4_k_m: 8.5
+    q4_0: 7.5
+
+  "14B":
+    f16: 28.0
+    q8_0: 14.0
+    q4_k_m: 9.0
+    q4_0: 8.0
+
+  "33B":
+    f16: 66.0
+    q8_0: 33.0
+    q4_k_m: 21.0
+    q4_0: 19.0
+
+  "70B":
+    f16: 140.0
+    q8_0: 70.0
+    q4_k_m: 45.0
+    q4_0: 40.0
+
+# Layer counts by model architecture
+layer_counts:
+  "1B": 22
+  "3B": 26
+  "7B": 32
+  "8B": 32
+  "13B": 40
+  "14B": 40
+  "33B": 60
+  "70B": 80
+
+# Environment variable mappings
+environment_mapping:
+  common:
+    OLLAMA_HOST: "127.0.0.1:11434"
+    OLLAMA_NOPRUNE: "1"
+    OLLAMA_KEEP_ALIVE: "15m"
+
+  nvidia:
+    CUDA_VISIBLE_DEVICES: "auto"
+    CUDA_LAUNCH_BLOCKING: "0"
+    OLLAMA_CUDA_GRAPHS: "auto"
+
+  amd:
+    HIP_VISIBLE_DEVICES: "auto"
+    HSA_OVERRIDE_GFX_VERSION: "10.3.0"
+    ROCR_VISIBLE_DEVICES: "auto"
+
+  apple:
+    OLLAMA_METAL: "1"
+    OLLAMA_METAL_ASYNC: "1"
+
+  cpu:
+    OLLAMA_NUM_GPU: "0"
+    OMP_NUM_THREADS: "auto"
+    GOMP_CPU_AFFINITY: "auto"
+
+# Benchmark reference values (for comparison)
+benchmark_references:
+  nvidia:
+    rtx_4090:
+      model: "llama3.2:8b-q4_k_m"
+      tokens_per_second: 120
+      memory_bandwidth_gbps: 1008
+
+    rtx_3090:
+      model: "llama3.2:8b-q4_k_m"
+      tokens_per_second: 85
+      memory_bandwidth_gbps: 936
+
+    rtx_3080:
+      model: "llama3.2:8b-q4_k_m"
+      tokens_per_second: 65
+      memory_bandwidth_gbps: 760
+
+  apple:
+    m3_max:
+      model: "llama3.2:8b-q4_k_m"
+      tokens_per_second: 55
+      memory_bandwidth_gbps: 400
+
+    m2_max:
+      model: "llama3.2:8b-q4_k_m"
+      tokens_per_second: 45
+      memory_bandwidth_gbps: 400
+
+    m1_max:
+      model: "llama3.2:8b-q4_k_m"
+      tokens_per_second: 35
+      memory_bandwidth_gbps: 400
+
+  cpu:
+    intel_i9_13900k:
+      model: "llama3.2:8b-q4_k_m"
+      tokens_per_second: 18
+
+    amd_ryzen_9_7950x:
+      model: "llama3.2:8b-q4_k_m"
+      tokens_per_second: 16
+
+    apple_m3_cpu_only:
+      model: "llama3.2:8b-q4_k_m"
+      tokens_per_second: 12
+
+# USB-specific optimizations
+usb_optimization:
+  # Model loading from USB considerations
+  model_loading:
+    prefer_mmap: true
+    preload_on_startup: true
+    keep_alive_extended: "30m"
+
+  # USB speed tier adjustments
+  usb_tiers:
+    usb_3_2:
+      read_speed_mbps: 1000
+      model_load_strategy: "mmap"
+
+    usb_3_1:
+      read_speed_mbps: 500
+      model_load_strategy: "mmap"
+
+    usb_3_0:
+      read_speed_mbps: 250
+      model_load_strategy: "mmap"
+
+    usb_2_0:
+      read_speed_mbps: 40
+      model_load_strategy: "full_load"
+      keep_alive_extended: "1h"

@@ -1,0 +1,317 @@
+# USB-AI Performance Profiles Configuration
+# ==========================================
+#
+# This file defines performance profiles for USB-AI optimization.
+# Each profile is tuned for different use cases and hardware capabilities.
+#
+# Profiles:
+#   - minimal:     Low resource usage, ideal for older hardware or background operation
+#   - balanced:    Default profile, good performance with reasonable resource usage
+#   - performance: Higher resource usage for faster responses
+#   - max:         Maximum performance, uses all available resources
+#
+# USB Optimization Notes:
+#   - USB 3.0+ is recommended for optimal performance
+#   - Model loading is I/O bound, mmap helps reduce initial load time
+#   - Keep models loaded (keep_alive) to avoid repeated USB reads
+#   - SSD-based USB drives significantly improve performance
+
+version: "1.0.0"
+
+# Default profile to use when not specified
+default_profile: balanced
+
+profiles:
+  minimal:
+    description: "Low resource usage for older hardware or background operation"
+
+    # CPU Configuration
+    cpu:
+      thread_ratio: 0.25          # Use 25% of physical cores
+      thread_min: 1               # Minimum threads
+      thread_max: 4               # Maximum threads regardless of cores
+      priority: low               # Process priority (low, normal, high)
+
+    # Memory Configuration
+    memory:
+      limit_ratio: 0.30           # Use 30% of available RAM
+      limit_min_gb: 2.0           # Minimum memory allocation
+      limit_max_gb: 8.0           # Maximum memory allocation
+      mlock: false                # Don't lock memory (allow swapping)
+      mmap: true                  # Use memory mapping for faster loads
+
+    # GPU Configuration
+    gpu:
+      enabled: false              # Disable GPU acceleration
+      layers: 0                   # GPU layers to offload
+      main_gpu: 0                 # Primary GPU index
+
+    # Model Parameters
+    model:
+      batch_size: 256             # Tokens per batch
+      context_length: 2048        # Maximum context window
+      keep_alive: "5m"            # Keep model loaded for 5 minutes
+      flash_attention: false      # Disable flash attention
+
+    # USB Optimization
+    usb:
+      read_buffer_kb: 256         # Read buffer size
+      prefetch: false             # Don't prefetch model data
+      cache_layers: 0             # Don't cache layer data in RAM
+
+    # Recommended models for this profile
+    recommended_models:
+      - "tinyllama:1.1b"
+      - "phi3:mini"
+      - "gemma2:2b"
+
+  balanced:
+    description: "Good performance with reasonable resource usage (default)"
+
+    cpu:
+      thread_ratio: 0.50          # Use 50% of physical cores
+      thread_min: 2
+      thread_max: 8
+      priority: normal
+
+    memory:
+      limit_ratio: 0.50           # Use 50% of available RAM
+      limit_min_gb: 4.0
+      limit_max_gb: 16.0
+      mlock: false
+      mmap: true
+
+    gpu:
+      enabled: true
+      layers: 20                  # Partial GPU offload
+      main_gpu: 0
+
+    model:
+      batch_size: 512
+      context_length: 4096
+      keep_alive: "15m"
+      flash_attention: true
+
+    usb:
+      read_buffer_kb: 512
+      prefetch: true
+      cache_layers: 10            # Cache first 10 layers
+
+    recommended_models:
+      - "dolphin-llama3:8b"
+      - "llama3.2:8b"
+      - "mistral:7b"
+      - "qwen2.5:7b"
+
+  performance:
+    description: "Higher resource usage for faster responses"
+
+    cpu:
+      thread_ratio: 0.75          # Use 75% of physical cores
+      thread_min: 4
+      thread_max: 16
+      priority: high
+
+    memory:
+      limit_ratio: 0.70           # Use 70% of available RAM
+      limit_min_gb: 8.0
+      limit_max_gb: 32.0
+      mlock: true                 # Lock memory to prevent swapping
+      mmap: true
+
+    gpu:
+      enabled: true
+      layers: 35                  # Heavy GPU offload
+      main_gpu: 0
+
+    model:
+      batch_size: 1024
+      context_length: 8192
+      keep_alive: "30m"
+      flash_attention: true
+
+    usb:
+      read_buffer_kb: 1024
+      prefetch: true
+      cache_layers: 25
+
+    recommended_models:
+      - "dolphin-llama3:8b"
+      - "llama3.2:8b"
+      - "qwen2.5:14b"
+      - "deepseek-coder:6.7b"
+
+  max:
+    description: "Maximum performance using all available resources"
+
+    cpu:
+      thread_ratio: 1.0           # Use all physical cores
+      thread_min: 4
+      thread_max: 64
+      priority: high
+
+    memory:
+      limit_ratio: 0.85           # Use 85% of available RAM
+      limit_min_gb: 16.0
+      limit_max_gb: 128.0
+      mlock: true
+      mmap: true
+
+    gpu:
+      enabled: true
+      layers: 99                  # Full GPU offload
+      main_gpu: 0
+
+    model:
+      batch_size: 2048
+      context_length: 16384
+      keep_alive: "1h"
+      flash_attention: true
+
+    usb:
+      read_buffer_kb: 2048
+      prefetch: true
+      cache_layers: 50            # Cache many layers
+
+    recommended_models:
+      - "qwen2.5:14b"
+      - "dolphin-llama3:8b"
+      - "codellama:13b"
+      - "wizardcoder:13b"
+
+# Hardware-specific adjustments
+# These modify the selected profile based on detected hardware
+
+hardware_adjustments:
+  # Apple Silicon optimizations
+  apple_silicon:
+    applies_to:
+      platform: darwin
+      architecture: arm64
+    adjustments:
+      gpu:
+        enabled: true
+        layers: 99                # Metal handles full offload well
+      memory:
+        mlock: false              # Unified memory doesn't need mlock
+      model:
+        flash_attention: true
+
+  # Low memory systems (< 8GB)
+  low_memory:
+    applies_to:
+      max_ram_gb: 8
+    adjustments:
+      memory:
+        limit_ratio: 0.40
+        mlock: false
+      model:
+        context_length: 2048
+        batch_size: 256
+      gpu:
+        layers: 10                # Reduced GPU offload
+
+  # High memory systems (>= 32GB)
+  high_memory:
+    applies_to:
+      min_ram_gb: 32
+    adjustments:
+      memory:
+        mlock: true
+      model:
+        context_length: 16384
+      usb:
+        cache_layers: 40
+
+  # NVIDIA GPU with >= 8GB VRAM
+  nvidia_high_vram:
+    applies_to:
+      gpu_vendor: nvidia
+      min_vram_gb: 8
+    adjustments:
+      gpu:
+        enabled: true
+        layers: 40
+      model:
+        flash_attention: true
+
+  # USB 2.0 fallback (slow storage)
+  slow_storage:
+    applies_to:
+      usb_speed: usb2
+    adjustments:
+      memory:
+        mmap: false               # Full load better for USB 2.0
+        mlock: true               # Keep in RAM once loaded
+      model:
+        keep_alive: "1h"          # Keep loaded longer
+      usb:
+        read_buffer_kb: 128
+        prefetch: false
+
+# Model size recommendations based on RAM
+model_recommendations:
+  ram_thresholds:
+    - min_gb: 4
+      max_gb: 8
+      recommended:
+        - "tinyllama:1.1b"
+        - "phi3:mini"
+        - "gemma2:2b"
+      max_parameters: "3B"
+
+    - min_gb: 8
+      max_gb: 16
+      recommended:
+        - "dolphin-llama3:8b"
+        - "llama3.2:8b"
+        - "mistral:7b"
+      max_parameters: "8B"
+
+    - min_gb: 16
+      max_gb: 32
+      recommended:
+        - "dolphin-llama3:8b"
+        - "qwen2.5:14b"
+        - "codellama:13b"
+      max_parameters: "14B"
+
+    - min_gb: 32
+      max_gb: 64
+      recommended:
+        - "qwen2.5:14b"
+        - "llama3.1:70b-q4"
+        - "deepseek-coder:33b"
+      max_parameters: "33B"
+
+    - min_gb: 64
+      max_gb: 999
+      recommended:
+        - "llama3.1:70b"
+        - "qwen2.5:72b"
+        - "mixtral:8x7b"
+      max_parameters: "70B+"
+
+# Environment variable mappings
+# Maps profile settings to Ollama environment variables
+environment_mapping:
+  OLLAMA_NUM_THREADS: "cpu.thread_count"
+  OLLAMA_NUM_GPU: "gpu.layers"
+  OLLAMA_FLASH_ATTENTION: "model.flash_attention"
+  OLLAMA_KEEP_ALIVE: "model.keep_alive"
+  OLLAMA_HOST: "127.0.0.1:11434"
+  OLLAMA_NOPRUNE: "1"
+
+# Startup optimization settings
+startup:
+  # Preload default model on startup
+  preload_default_model: true
+
+  # Warmup with a simple prompt to ensure model is ready
+  warmup_prompt: "Hello"
+
+  # Maximum time to wait for startup (seconds)
+  startup_timeout: 120
+
+  # Health check interval during startup (seconds)
+  health_check_interval: 2

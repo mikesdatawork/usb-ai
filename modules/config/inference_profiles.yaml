@@ -1,0 +1,383 @@
+# USB-AI Inference Profiles Configuration
+# ========================================
+#
+# This file defines inference profiles optimized for different use cases.
+# Each profile balances latency, throughput, and quality differently.
+#
+# Profiles:
+#   - realtime:   Minimal latency for interactive chat
+#   - throughput: Batch optimized for API/backend use
+#   - quality:    Full sampling for highest quality output
+#   - turbo:      Maximum speed with quality tradeoffs
+#
+# Speed vs Quality Tradeoffs:
+#   - Lower temperature = faster (narrower search space)
+#   - Smaller top_k = faster (fewer candidates)
+#   - Disabled repeat_penalty = faster (no penalty calculation)
+#   - Smaller context = faster (less memory, less computation)
+#   - Streaming with small chunks = lower perceived latency
+#   - Non-streaming batch = higher throughput
+
+version: "1.0.0"
+
+# Default profile for interactive use
+default_profile: realtime
+
+# =============================================================================
+# Profile Definitions
+# =============================================================================
+
+profiles:
+  # ---------------------------------------------------------------------------
+  # REALTIME: Minimal latency for interactive chat
+  # ---------------------------------------------------------------------------
+  realtime:
+    description: "Minimal latency, streaming optimized for interactive chat"
+
+    # Use case indicators
+    use_cases:
+      - interactive_chat
+      - conversational_ai
+      - voice_assistant
+      - live_demo
+
+    # Sampling parameters
+    sampling:
+      temperature: 0.7          # Moderate creativity
+      top_p: 0.9                # Nucleus sampling threshold
+      top_k: 40                 # Top-k filtering
+      repeat_penalty: 1.0       # Disabled for speed (no penalty calculation)
+      presence_penalty: 0.0     # Disabled for speed
+      frequency_penalty: 0.0    # Disabled for speed
+
+    # Generation parameters
+    generation:
+      num_predict: 256          # Shorter responses for responsiveness
+      num_ctx: 2048             # Smaller context for speed
+      stop_sequences: []        # No additional stop sequences
+
+    # Streaming configuration
+    streaming:
+      enabled: true
+      chunk_size: 1             # Token-by-token for lowest latency
+      flush_interval_ms: 0      # Immediate flush
+
+    # Connection parameters
+    connection:
+      timeout_connect_s: 5.0    # Fast connection timeout
+      timeout_read_s: 30.0      # Read timeout
+      keep_alive: true          # Reuse connections
+      max_connections: 4        # Connection pool size
+
+    # Buffer settings
+    buffering:
+      response_buffer_bytes: 1024
+      prefetch_tokens: 0        # No prefetching for lowest latency
+
+    # Advanced options
+    advanced:
+      mirostat: 0               # Disabled for speed
+      mirostat_eta: 0.1
+      mirostat_tau: 5.0
+      use_flash_attention: true
+      speculative_decoding: false  # Disabled for consistency
+
+    # Performance expectations
+    performance_targets:
+      time_to_first_token_ms: 100
+      tokens_per_second_min: 20
+      max_response_time_s: 30
+
+    # Quality tradeoffs
+    quality_notes: |
+      - Repeat penalty disabled may cause some repetition
+      - Smaller context may miss long-range dependencies
+      - Shorter responses may truncate complex answers
+
+  # ---------------------------------------------------------------------------
+  # THROUGHPUT: Batch optimized for processing multiple requests
+  # ---------------------------------------------------------------------------
+  throughput:
+    description: "Batch optimized for API backends and bulk processing"
+
+    use_cases:
+      - api_backend
+      - batch_processing
+      - document_analysis
+      - data_extraction
+
+    sampling:
+      temperature: 0.5          # Lower for more consistent output
+      top_p: 0.85               # Tighter nucleus
+      top_k: 30                 # Fewer candidates
+      repeat_penalty: 1.0       # Disabled for speed
+      presence_penalty: 0.0
+      frequency_penalty: 0.0
+
+    generation:
+      num_predict: 512          # Longer outputs for completeness
+      num_ctx: 4096             # Larger context for batch work
+      stop_sequences: []
+
+    streaming:
+      enabled: false            # Non-streaming for batch efficiency
+      chunk_size: 64            # Large chunks if streaming needed
+      flush_interval_ms: 100
+
+    connection:
+      timeout_connect_s: 10.0
+      timeout_read_s: 120.0     # Longer timeout for batch
+      keep_alive: true
+      max_connections: 16       # More connections for parallelism
+
+    buffering:
+      response_buffer_bytes: 8192
+      prefetch_tokens: 32
+
+    advanced:
+      mirostat: 0
+      mirostat_eta: 0.1
+      mirostat_tau: 5.0
+      use_flash_attention: true
+      speculative_decoding: true  # Enable for throughput
+
+    # Batch processing settings
+    batching:
+      enabled: true
+      batch_size: 8             # Process 8 requests in parallel
+      max_wait_ms: 50           # Wait up to 50ms to fill batch
+      dynamic_sizing: true      # Adjust batch size based on load
+
+    performance_targets:
+      requests_per_second_min: 10
+      tokens_per_second_min: 100  # Aggregate across batch
+      max_response_time_s: 120
+
+    quality_notes: |
+      - Lower temperature reduces creativity
+      - Non-streaming means higher latency per request
+      - Optimized for aggregate throughput, not individual latency
+
+  # ---------------------------------------------------------------------------
+  # QUALITY: Full sampling for highest quality output
+  # ---------------------------------------------------------------------------
+  quality:
+    description: "Full sampling parameters for highest quality responses"
+
+    use_cases:
+      - creative_writing
+      - code_generation
+      - complex_reasoning
+      - research_analysis
+      - content_creation
+
+    sampling:
+      temperature: 0.8          # Higher for creativity
+      top_p: 0.95               # Wide nucleus
+      top_k: 100                # Many candidates
+      repeat_penalty: 1.1       # Reduce repetition
+      presence_penalty: 0.1     # Encourage topic variety
+      frequency_penalty: 0.1    # Reduce word repetition
+
+    generation:
+      num_predict: 1024         # Long outputs
+      num_ctx: 8192             # Large context
+      stop_sequences: []
+
+    streaming:
+      enabled: true
+      chunk_size: 4             # Small chunks for interactivity
+      flush_interval_ms: 50
+
+    connection:
+      timeout_connect_s: 10.0
+      timeout_read_s: 180.0     # Long timeout for complex generation
+      keep_alive: true
+      max_connections: 4
+
+    buffering:
+      response_buffer_bytes: 4096
+      prefetch_tokens: 16
+
+    advanced:
+      mirostat: 2               # Mirostat 2 for quality control
+      mirostat_eta: 0.1         # Learning rate
+      mirostat_tau: 5.0         # Target entropy
+      use_flash_attention: true
+      speculative_decoding: false  # Disabled for quality
+
+    performance_targets:
+      time_to_first_token_ms: 500
+      tokens_per_second_min: 10
+      max_response_time_s: 180
+
+    quality_notes: |
+      - Mirostat provides consistent quality
+      - Higher penalties improve diversity
+      - Slower but higher quality output
+      - Best for important or published content
+
+  # ---------------------------------------------------------------------------
+  # TURBO: Maximum speed with quality tradeoffs
+  # ---------------------------------------------------------------------------
+  turbo:
+    description: "Maximum speed with aggressive quality tradeoffs"
+
+    use_cases:
+      - quick_answers
+      - simple_queries
+      - high_volume_api
+      - latency_critical
+      - autocomplete
+
+    sampling:
+      temperature: 0.3          # Very focused output
+      top_p: 0.7                # Narrow nucleus
+      top_k: 20                 # Very few candidates
+      repeat_penalty: 1.0       # Disabled
+      presence_penalty: 0.0     # Disabled
+      frequency_penalty: 0.0    # Disabled
+
+    generation:
+      num_predict: 128          # Short responses
+      num_ctx: 1024             # Minimal context
+      stop_sequences: ["\n\n"]  # Stop at paragraph break
+
+    streaming:
+      enabled: true
+      chunk_size: 8             # Larger chunks for efficiency
+      flush_interval_ms: 0
+
+    connection:
+      timeout_connect_s: 3.0    # Very fast timeout
+      timeout_read_s: 15.0      # Short read timeout
+      keep_alive: true
+      max_connections: 8
+
+    buffering:
+      response_buffer_bytes: 2048
+      prefetch_tokens: 64
+
+    advanced:
+      mirostat: 0               # Disabled for speed
+      mirostat_eta: 0.1
+      mirostat_tau: 5.0
+      use_flash_attention: true
+      speculative_decoding: true  # Enable for speed
+
+    batching:
+      enabled: true
+      batch_size: 4
+      max_wait_ms: 20
+      dynamic_sizing: true
+
+    performance_targets:
+      time_to_first_token_ms: 50
+      tokens_per_second_min: 50
+      max_response_time_s: 15
+
+    quality_notes: |
+      - Very focused/deterministic output
+      - May miss nuanced answers
+      - Short responses may truncate important info
+      - Best for simple, factual queries
+
+# =============================================================================
+# Speed vs Quality Tradeoff Analysis
+# =============================================================================
+
+tradeoff_analysis:
+  # Factors that affect speed (ranked by impact)
+  speed_factors:
+    high_impact:
+      - context_size: "Smaller context = faster processing"
+      - num_predict: "Shorter output = less generation time"
+      - gpu_offload: "More GPU layers = faster inference"
+      - flash_attention: "Enables faster attention computation"
+
+    medium_impact:
+      - top_k: "Fewer candidates = faster sampling"
+      - temperature: "Lower temperature = faster convergence"
+      - batch_size: "Larger batches = better GPU utilization"
+      - speculative_decoding: "Can speed up generation 2-3x"
+
+    low_impact:
+      - repeat_penalty: "Adds small overhead when enabled"
+      - presence_penalty: "Adds small overhead when enabled"
+      - mirostat: "Adds sampling overhead"
+
+  # Factors that affect quality (ranked by impact)
+  quality_factors:
+    high_impact:
+      - temperature: "Controls creativity/randomness"
+      - context_size: "More context = better understanding"
+      - num_predict: "Longer output = more complete answers"
+      - mirostat: "Maintains consistent perplexity"
+
+    medium_impact:
+      - repeat_penalty: "Reduces repetitive output"
+      - top_p: "Controls output diversity"
+      - top_k: "Filters low-probability tokens"
+
+    low_impact:
+      - presence_penalty: "Encourages topic variety"
+      - frequency_penalty: "Reduces word repetition"
+
+  # Recommended profiles by use case
+  recommendations:
+    interactive_chat: realtime
+    api_backend: throughput
+    creative_writing: quality
+    code_generation: quality
+    quick_lookup: turbo
+    voice_assistant: realtime
+    batch_processing: throughput
+    document_analysis: throughput
+    research: quality
+
+# =============================================================================
+# Benchmark Results Template
+# =============================================================================
+
+benchmark_template:
+  prompts:
+    - id: simple
+      text: "What is 2 + 2?"
+      expected_tokens: 10
+    - id: medium
+      text: "Explain recursion in programming."
+      expected_tokens: 100
+    - id: complex
+      text: "Write a Python binary search function with error handling."
+      expected_tokens: 300
+
+  metrics:
+    - time_to_first_token_ms
+    - total_time_ms
+    - tokens_per_second
+    - prompt_tokens
+    - completion_tokens
+
+  percentiles: [50, 75, 90, 95, 99]
+
+# =============================================================================
+# Environment Variable Mapping
+# =============================================================================
+
+environment_mapping:
+  # Maps profile settings to Ollama environment variables
+  OLLAMA_NUM_CTX: "generation.num_ctx"
+  OLLAMA_FLASH_ATTENTION: "advanced.use_flash_attention"
+  OLLAMA_KEEP_ALIVE: "connection.keep_alive"
+
+  # Request option mapping for Ollama API
+  api_options:
+    temperature: "sampling.temperature"
+    top_p: "sampling.top_p"
+    top_k: "sampling.top_k"
+    repeat_penalty: "sampling.repeat_penalty"
+    num_predict: "generation.num_predict"
+    num_ctx: "generation.num_ctx"
+    mirostat: "advanced.mirostat"
+    mirostat_eta: "advanced.mirostat_eta"
+    mirostat_tau: "advanced.mirostat_tau"

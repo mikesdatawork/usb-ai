@@ -1,0 +1,583 @@
+# =============================================================================
+#                       USB-AI Build Manifest
+# =============================================================================
+#
+# This manifest defines all build artifacts, their dependencies, checksums,
+# and parallel vs sequential execution requirements.
+#
+# Usage:
+#   python scripts/build/parallel_builder.py --manifest scripts/build/build_manifest.yaml
+#
+# Task Fields:
+#   id:               Unique task identifier
+#   name:             Human-readable name
+#   phase:            Build phase (environment, download_ollama, etc.)
+#   description:      Task description
+#   script:           Python script to execute (relative to root)
+#   dependencies:     List of task IDs that must complete first
+#   parallel_group:   Tasks in same group can run in parallel
+#   timeout:          Maximum execution time in seconds
+#   retries:          Number of retry attempts on failure
+#   skip_on_failure:  Continue build if this task fails
+#   artifacts:        Expected output files/directories
+#   checksum_files:   Files to verify checksums for
+#
+# =============================================================================
+
+version: "1.0.0"
+name: "USB-AI Build"
+description: "Portable Offline Encrypted AI System"
+
+# -----------------------------------------------------------------------------
+# Build Configuration
+# -----------------------------------------------------------------------------
+config:
+  max_workers: 4
+  max_retries: 3
+  retry_delay_seconds: 5
+  task_timeout_seconds: 3600
+  state_file: ".build_state.json"
+  log_file: "build.log"
+
+  # Platform-specific settings
+  platforms:
+    - darwin-arm64
+    - darwin-amd64
+    - linux-amd64
+    - windows-amd64
+
+# -----------------------------------------------------------------------------
+# Global Variables
+# -----------------------------------------------------------------------------
+variables:
+  ollama_version: "v0.15.4"
+  webui_package: "open-webui"
+  primary_model: "dolphin-llama3:8b"
+  webui_port: 3000
+  ollama_port: 11434
+
+# -----------------------------------------------------------------------------
+# Build Tasks
+# -----------------------------------------------------------------------------
+tasks:
+  # ===========================================================================
+  # Phase 1: Environment Setup
+  # ===========================================================================
+  - id: setup_environment
+    name: "Setup Build Environment"
+    phase: environment
+    description: "Create directory structure, config files, and verify prerequisites"
+    script: "scripts/build/s001_setup_environment.py"
+    dependencies: []
+    timeout: 300
+    retries: 1
+    skip_on_failure: false
+    artifacts:
+      - "modules/config/system.json"
+      - "modules/config/user.json"
+      - "modules/models/config/models.json"
+      - "modules/ollama-portable/bin"
+      - "modules/ollama-portable/config"
+      - "modules/webui-portable/app"
+      - "modules/webui-portable/data"
+      - "modules/webui-portable/config"
+      - "modules/launchers"
+
+  # ===========================================================================
+  # Phase 2: Ollama Downloads (Parallel)
+  # ===========================================================================
+  - id: download_ollama_darwin_arm64
+    name: "Download Ollama (macOS ARM64)"
+    phase: download_ollama
+    description: "Download Ollama binary for Apple Silicon Macs"
+    script: "scripts/build/s002_download_ollama.py"
+    dependencies:
+      - setup_environment
+    parallel_group: ollama_downloads
+    timeout: 1800
+    retries: 3
+    skip_on_failure: false
+    artifacts:
+      - "modules/ollama-portable/bin/darwin-arm64/ollama"
+    checksum_files:
+      - path: "modules/ollama-portable/bin/darwin-arm64/ollama"
+        algorithm: sha256
+        # Checksum to be updated after download
+
+  - id: download_ollama_darwin_amd64
+    name: "Download Ollama (macOS Intel)"
+    phase: download_ollama
+    description: "Download Ollama binary for Intel Macs"
+    script: "scripts/build/s002_download_ollama.py"
+    dependencies:
+      - setup_environment
+    parallel_group: ollama_downloads
+    timeout: 1800
+    retries: 3
+    skip_on_failure: false
+    artifacts:
+      - "modules/ollama-portable/bin/darwin-amd64/ollama"
+    checksum_files:
+      - path: "modules/ollama-portable/bin/darwin-amd64/ollama"
+        algorithm: sha256
+
+  - id: download_ollama_linux
+    name: "Download Ollama (Linux)"
+    phase: download_ollama
+    description: "Download Ollama binary for Linux x64"
+    script: "scripts/build/s002_download_ollama.py"
+    dependencies:
+      - setup_environment
+    parallel_group: ollama_downloads
+    timeout: 1800
+    retries: 3
+    skip_on_failure: false
+    artifacts:
+      - "modules/ollama-portable/bin/linux-amd64/ollama"
+    checksum_files:
+      - path: "modules/ollama-portable/bin/linux-amd64/ollama"
+        algorithm: sha256
+
+  - id: download_ollama_windows
+    name: "Download Ollama (Windows)"
+    phase: download_ollama
+    description: "Download Ollama binary for Windows x64"
+    script: "scripts/build/s002_download_ollama.py"
+    dependencies:
+      - setup_environment
+    parallel_group: ollama_downloads
+    timeout: 1800
+    retries: 3
+    skip_on_failure: false
+    artifacts:
+      - "modules/ollama-portable/bin/windows-amd64/ollama.exe"
+    checksum_files:
+      - path: "modules/ollama-portable/bin/windows-amd64/ollama.exe"
+        algorithm: sha256
+
+  - id: create_ollama_config
+    name: "Create Ollama Configuration"
+    phase: download_ollama
+    description: "Create Ollama portable configuration file"
+    script: "scripts/build/s002_download_ollama.py"
+    dependencies:
+      - setup_environment
+    timeout: 60
+    retries: 1
+    skip_on_failure: false
+    artifacts:
+      - "modules/ollama-portable/config/ollama.json"
+
+  # ===========================================================================
+  # Phase 3: Model Downloads (Sequential - requires Ollama)
+  # ===========================================================================
+  - id: download_model_dolphin
+    name: "Download Dolphin-LLaMA3 (8B)"
+    phase: download_models
+    description: "Download primary model: Dolphin-LLaMA3 8B (uncensored)"
+    script: "scripts/build/s003_download_models.py"
+    dependencies:
+      - download_ollama_linux
+      - download_ollama_darwin_arm64
+    timeout: 7200  # 2 hours for large model
+    retries: 3
+    skip_on_failure: false
+    artifacts:
+      - "modules/models/blobs/sha256-*"
+      - "modules/models/manifests/registry.ollama.ai/library/dolphin-llama3"
+
+  - id: download_model_llama32
+    name: "Download LLaMA 3.2 (8B)"
+    phase: download_models
+    description: "Download secondary model: LLaMA 3.2 8B"
+    script: "scripts/build/s003_download_models.py"
+    dependencies:
+      - download_model_dolphin
+    parallel_group: secondary_models
+    timeout: 7200
+    retries: 3
+    skip_on_failure: true  # Optional model
+    artifacts:
+      - "modules/models/manifests/registry.ollama.ai/library/llama3.2"
+
+  - id: download_model_qwen
+    name: "Download Qwen 2.5 (14B)"
+    phase: download_models
+    description: "Download tertiary model: Qwen 2.5 14B"
+    script: "scripts/build/s003_download_models.py"
+    dependencies:
+      - download_model_dolphin
+    parallel_group: secondary_models
+    timeout: 10800  # 3 hours for larger model
+    retries: 3
+    skip_on_failure: true  # Optional model
+    artifacts:
+      - "modules/models/manifests/registry.ollama.ai/library/qwen2.5"
+
+  - id: update_models_config
+    name: "Update Models Configuration"
+    phase: download_models
+    description: "Update models.json with installed models"
+    script: "scripts/build/s003_download_models.py"
+    dependencies:
+      - download_model_dolphin
+    timeout: 60
+    retries: 1
+    skip_on_failure: false
+    artifacts:
+      - "modules/models/config/models.json"
+
+  # ===========================================================================
+  # Phase 4: WebUI Setup (Parallel with model downloads)
+  # ===========================================================================
+  - id: setup_webui_directories
+    name: "Setup WebUI Directories"
+    phase: setup_webui
+    description: "Create WebUI directory structure"
+    script: "scripts/build/s004_setup_webui.py"
+    dependencies:
+      - setup_environment
+    timeout: 300
+    retries: 1
+    skip_on_failure: false
+    artifacts:
+      - "modules/webui-portable/app"
+      - "modules/webui-portable/data"
+      - "modules/webui-portable/data/uploads"
+      - "modules/webui-portable/data/cache"
+      - "modules/webui-portable/static/css"
+      - "modules/webui-portable/config"
+
+  - id: install_webui_dependencies
+    name: "Install WebUI Dependencies"
+    phase: setup_webui
+    description: "Install Open WebUI Python packages"
+    script: "scripts/build/s004_setup_webui.py"
+    dependencies:
+      - setup_webui_directories
+    timeout: 3600
+    retries: 3
+    skip_on_failure: false
+    artifacts:
+      - "modules/webui-portable/app/open_webui"
+
+  - id: create_webui_scripts
+    name: "Create WebUI Scripts"
+    phase: setup_webui
+    description: "Create start scripts and configuration"
+    script: "scripts/build/s004_setup_webui.py"
+    dependencies:
+      - setup_webui_directories
+    timeout: 120
+    retries: 1
+    skip_on_failure: false
+    artifacts:
+      - "modules/webui-portable/start_webui.py"
+      - "modules/webui-portable/config/webui.json"
+      - "modules/webui-portable/config/webui_env.sh"
+
+  # ===========================================================================
+  # Phase 5: Theme Application
+  # ===========================================================================
+  - id: apply_theme
+    name: "Apply Custom Theme"
+    phase: apply_theme
+    description: "Apply dark flat theme with orange accent"
+    script: "scripts/build/s005_apply_theme.py"
+    dependencies:
+      - install_webui_dependencies
+      - create_webui_scripts
+    timeout: 120
+    retries: 1
+    skip_on_failure: true  # Theme is optional
+    artifacts:
+      - "modules/webui-portable/static/css/custom-theme.css"
+      - "modules/webui-portable/static/css/README.md"
+
+  # ===========================================================================
+  # Phase 6: Launcher Creation
+  # ===========================================================================
+  - id: create_launcher_python
+    name: "Create Python Launchers"
+    phase: create_launchers
+    description: "Create cross-platform Python launcher scripts"
+    script: "scripts/build/s001_setup_environment.py"
+    dependencies:
+      - setup_environment
+    timeout: 120
+    retries: 1
+    skip_on_failure: false
+    artifacts:
+      - "scripts/launchers/start.py"
+      - "scripts/launchers/stop.py"
+      - "scripts/launchers/status.py"
+
+  - id: create_launcher_macos
+    name: "Create macOS Launcher"
+    phase: create_launchers
+    description: "Create macOS .command launcher script"
+    script: "scripts/build/s001_setup_environment.py"
+    dependencies:
+      - setup_environment
+    parallel_group: platform_launchers
+    timeout: 60
+    retries: 1
+    skip_on_failure: false
+    artifacts:
+      - "modules/launchers/start_macos.command"
+
+  - id: create_launcher_linux
+    name: "Create Linux Launcher"
+    phase: create_launchers
+    description: "Create Linux shell launcher script"
+    script: "scripts/build/s001_setup_environment.py"
+    dependencies:
+      - setup_environment
+    parallel_group: platform_launchers
+    timeout: 60
+    retries: 1
+    skip_on_failure: false
+    artifacts:
+      - "modules/launchers/start_linux.sh"
+
+  - id: create_launcher_windows
+    name: "Create Windows Launcher"
+    phase: create_launchers
+    description: "Create Windows batch launcher script"
+    script: "scripts/build/s001_setup_environment.py"
+    dependencies:
+      - setup_environment
+    parallel_group: platform_launchers
+    timeout: 60
+    retries: 1
+    skip_on_failure: false
+    artifacts:
+      - "modules/launchers/start_windows.bat"
+
+  - id: create_stop_scripts
+    name: "Create Stop Scripts"
+    phase: create_launchers
+    description: "Create graceful shutdown scripts"
+    script: "scripts/build/s001_setup_environment.py"
+    dependencies:
+      - setup_environment
+    timeout: 60
+    retries: 1
+    skip_on_failure: false
+    artifacts:
+      - "modules/launchers/stop_all.sh"
+
+  # ===========================================================================
+  # Phase 7: Validation
+  # ===========================================================================
+  - id: validate_directory_structure
+    name: "Validate Directory Structure"
+    phase: validation
+    description: "Verify all required directories exist"
+    script: "scripts/build/validate_build.py"
+    dependencies:
+      - setup_environment
+      - create_launcher_python
+    parallel_group: validation_checks
+    timeout: 120
+    retries: 1
+    skip_on_failure: false
+
+  - id: validate_ollama_binaries
+    name: "Validate Ollama Binaries"
+    phase: validation
+    description: "Verify Ollama binaries for all platforms"
+    script: "scripts/build/validate_build.py"
+    dependencies:
+      - download_ollama_darwin_arm64
+      - download_ollama_darwin_amd64
+      - download_ollama_linux
+      - download_ollama_windows
+    parallel_group: validation_checks
+    timeout: 120
+    retries: 1
+    skip_on_failure: false
+
+  - id: validate_webui_installation
+    name: "Validate WebUI Installation"
+    phase: validation
+    description: "Verify Open WebUI is properly installed"
+    script: "scripts/build/validate_build.py"
+    dependencies:
+      - install_webui_dependencies
+      - apply_theme
+    parallel_group: validation_checks
+    timeout: 120
+    retries: 1
+    skip_on_failure: false
+
+  - id: validate_models
+    name: "Validate AI Models"
+    phase: validation
+    description: "Verify models are downloaded and configured"
+    script: "scripts/build/validate_build.py"
+    dependencies:
+      - download_model_dolphin
+      - update_models_config
+    parallel_group: validation_checks
+    timeout: 120
+    retries: 1
+    skip_on_failure: false
+
+  - id: validate_launchers
+    name: "Validate Launcher Scripts"
+    phase: validation
+    description: "Verify all launcher scripts exist and are executable"
+    script: "scripts/build/validate_build.py"
+    dependencies:
+      - create_launcher_python
+      - create_launcher_macos
+      - create_launcher_linux
+      - create_launcher_windows
+      - create_stop_scripts
+    parallel_group: validation_checks
+    timeout: 120
+    retries: 1
+    skip_on_failure: false
+
+  - id: generate_build_report
+    name: "Generate Build Report"
+    phase: validation
+    description: "Generate comprehensive build validation report"
+    script: "scripts/build/validate_build.py"
+    dependencies:
+      - validate_directory_structure
+      - validate_ollama_binaries
+      - validate_webui_installation
+      - validate_models
+      - validate_launchers
+    timeout: 300
+    retries: 1
+    skip_on_failure: false
+    artifacts:
+      - "docs/BUILD_REPORT.md"
+
+  # ===========================================================================
+  # Phase 8: Packaging (Optional)
+  # ===========================================================================
+  - id: create_usb_structure
+    name: "Create USB Structure"
+    phase: packaging
+    description: "Prepare final USB directory layout"
+    script: "scripts/build/package_release.py"
+    dependencies:
+      - generate_build_report
+    timeout: 600
+    retries: 1
+    skip_on_failure: true
+    artifacts:
+      - "release/USB_ROOT"
+
+  - id: generate_checksums
+    name: "Generate Release Checksums"
+    phase: packaging
+    description: "Generate SHA256 checksums for all release files"
+    script: "scripts/build/package_release.py"
+    dependencies:
+      - create_usb_structure
+    timeout: 600
+    retries: 1
+    skip_on_failure: true
+    artifacts:
+      - "release/checksums.sha256"
+
+  - id: create_readme
+    name: "Create End-User README"
+    phase: packaging
+    description: "Generate README for end users"
+    script: "scripts/build/package_release.py"
+    dependencies:
+      - create_usb_structure
+    timeout: 120
+    retries: 1
+    skip_on_failure: true
+    artifacts:
+      - "release/USB_ROOT/README.txt"
+
+# -----------------------------------------------------------------------------
+# Artifact Verification
+# -----------------------------------------------------------------------------
+artifacts:
+  critical:
+    - path: "modules/ollama-portable/bin/darwin-arm64/ollama"
+      min_size_mb: 50
+      description: "Ollama binary for macOS ARM64"
+
+    - path: "modules/ollama-portable/bin/darwin-amd64/ollama"
+      min_size_mb: 50
+      description: "Ollama binary for macOS Intel"
+
+    - path: "modules/ollama-portable/bin/linux-amd64/ollama"
+      min_size_mb: 50
+      description: "Ollama binary for Linux"
+
+    - path: "modules/ollama-portable/bin/windows-amd64/ollama.exe"
+      min_size_mb: 50
+      description: "Ollama binary for Windows"
+
+    - path: "modules/config/system.json"
+      min_size_mb: 0
+      description: "System configuration"
+
+    - path: "modules/config/user.json"
+      min_size_mb: 0
+      description: "User configuration"
+
+  optional:
+    - path: "modules/webui-portable/static/css/custom-theme.css"
+      description: "Custom dark theme"
+
+    - path: "modules/models/blobs"
+      description: "Model blob storage"
+
+# -----------------------------------------------------------------------------
+# Platform-Specific Configurations
+# -----------------------------------------------------------------------------
+platforms:
+  darwin-arm64:
+    ollama_url: "https://github.com/ollama/ollama/releases/download/v0.15.4/ollama-darwin.tgz"
+    binary_name: "ollama"
+
+  darwin-amd64:
+    ollama_url: "https://github.com/ollama/ollama/releases/download/v0.15.4/ollama-darwin.tgz"
+    binary_name: "ollama"
+
+  linux-amd64:
+    ollama_url: "https://github.com/ollama/ollama/releases/download/v0.15.4/ollama-linux-amd64.tar.zst"
+    binary_name: "ollama"
+
+  windows-amd64:
+    ollama_url: "https://github.com/ollama/ollama/releases/download/v0.15.4/ollama-windows-amd64.zip"
+    binary_name: "ollama.exe"
+
+# -----------------------------------------------------------------------------
+# Model Definitions
+# -----------------------------------------------------------------------------
+models:
+  primary:
+    name: "dolphin-llama3:8b"
+    size_gb: 4.7
+    parameters: "8B"
+    use_case: "general"
+    description: "Uncensored general-purpose model"
+    priority: critical
+
+  secondary:
+    - name: "llama3.2:8b"
+      size_gb: 4.7
+      parameters: "8B"
+      use_case: "general"
+      description: "Balanced general-purpose model"
+      priority: high
+
+    - name: "qwen2.5:14b"
+      size_gb: 8.9
+      parameters: "14B"
+      use_case: "complex"
+      description: "High-quality model for complex tasks"
+      priority: normal

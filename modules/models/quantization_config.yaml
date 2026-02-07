@@ -1,0 +1,313 @@
+# USB-AI Model Quantization Configuration
+# =========================================
+#
+# This file defines quantization presets, size/quality tradeoffs,
+# and memory requirements for supported models.
+#
+# Quantization Levels (GGUF format):
+#   Q4_K_M: 4-bit, medium quality - Best for limited space/RAM
+#   Q5_K_M: 5-bit, medium quality - Good balance
+#   Q8_0:   8-bit - Highest quality, needs more space/RAM
+
+# Target USB Configuration
+usb_size_gb: 128
+reserved_space_gb: 10  # Space for VeraCrypt, launchers, WebUI, etc.
+
+# Default quantization level when not specified
+default_level: Q4_K_M
+
+# Quantization Level Specifications
+quantization_levels:
+  Q4_K_M:
+    bits: 4
+    size_ratio: 0.45    # 45% of FP16 size
+    quality_ratio: 0.92  # 92% quality retention
+    description: "4-bit medium quantization"
+    use_cases:
+      - "Limited RAM (8-16GB)"
+      - "128GB USB drive"
+      - "Fast inference priority"
+    min_ram_gb: 6
+    recommended_for:
+      - "dolphin-llama3:8b"
+      - "llama3.2:latest"
+      - "mistral:7b"
+
+  Q5_K_M:
+    bits: 5
+    size_ratio: 0.55    # 55% of FP16 size
+    quality_ratio: 0.95  # 95% quality retention
+    description: "5-bit medium quantization"
+    use_cases:
+      - "Balanced quality/size"
+      - "256GB USB drive"
+      - "16-32GB RAM systems"
+    min_ram_gb: 8
+    recommended_for:
+      - "dolphin-llama3:8b"
+      - "qwen2.5:7b"
+      - "codellama:7b"
+
+  Q8_0:
+    bits: 8
+    size_ratio: 0.85    # 85% of FP16 size
+    quality_ratio: 0.99  # 99% quality retention
+    description: "8-bit quantization (highest quality)"
+    use_cases:
+      - "Maximum quality priority"
+      - "Large storage available"
+      - "32GB+ RAM systems"
+    min_ram_gb: 12
+    recommended_for:
+      - "Primary model for best output"
+      - "Code generation tasks"
+      - "Complex reasoning"
+
+# Model Specifications
+# Each model includes base size (FP16), architecture, and recommendations
+models:
+  dolphin-llama3:8b:
+    base_size_gb: 8.5
+    parameters: "8B"
+    architecture: "llama3"
+    context_length: 8192
+    priority: critical
+    description: "General purpose, uncensored"
+    quantization_recommendations:
+      128GB_usb: Q4_K_M
+      256GB_usb: Q5_K_M
+    estimated_sizes:
+      Q4_K_M: 3.8   # GB
+      Q5_K_M: 4.7   # GB
+      Q8_0: 7.2     # GB
+    memory_requirements:
+      Q4_K_M: 4.2   # GB RAM needed
+      Q5_K_M: 5.2   # GB RAM needed
+      Q8_0: 7.9     # GB RAM needed
+    inference_notes: |
+      - Fast inference on CPU with Q4_K_M
+      - GPU acceleration recommended for Q8_0
+      - 8K context fits comfortably in 16GB RAM
+
+  llama3.2:8b:
+    base_size_gb: 8.5
+    parameters: "8B"
+    architecture: "llama3.2"
+    context_length: 8192
+    priority: high
+    description: "General purpose, balanced"
+    quantization_recommendations:
+      128GB_usb: Q4_K_M
+      256GB_usb: Q5_K_M
+    estimated_sizes:
+      Q4_K_M: 3.8
+      Q5_K_M: 4.7
+      Q8_0: 7.2
+    memory_requirements:
+      Q4_K_M: 4.2
+      Q5_K_M: 5.2
+      Q8_0: 7.9
+
+  llama3.2:latest:
+    base_size_gb: 4.0
+    parameters: "3B"
+    architecture: "llama3.2"
+    context_length: 8192
+    priority: high
+    description: "Lightweight, fast responses"
+    quantization_recommendations:
+      128GB_usb: Q5_K_M
+      256GB_usb: Q8_0
+    estimated_sizes:
+      Q4_K_M: 1.8
+      Q5_K_M: 2.2
+      Q8_0: 3.4
+    memory_requirements:
+      Q4_K_M: 2.0
+      Q5_K_M: 2.4
+      Q8_0: 3.7
+    inference_notes: |
+      - Excellent for quick responses
+      - Can run on laptops with 8GB RAM
+      - Good fallback when resources limited
+
+  qwen2.5:14b:
+    base_size_gb: 15.0
+    parameters: "14B"
+    architecture: "qwen2.5"
+    context_length: 32768
+    priority: normal
+    description: "High quality, complex tasks"
+    quantization_recommendations:
+      128GB_usb: Q4_K_M
+      256GB_usb: Q4_K_M
+    estimated_sizes:
+      Q4_K_M: 6.8
+      Q5_K_M: 8.3
+      Q8_0: 12.8
+    memory_requirements:
+      Q4_K_M: 7.5
+      Q5_K_M: 9.1
+      Q8_0: 14.1
+    inference_notes: |
+      - Requires minimum 16GB RAM for Q4_K_M
+      - Long context capability (32K tokens)
+      - Best for complex reasoning tasks
+
+  qwen2.5:7b:
+    base_size_gb: 8.0
+    parameters: "7B"
+    architecture: "qwen2.5"
+    context_length: 32768
+    priority: normal
+    description: "Balanced quality and speed"
+    quantization_recommendations:
+      128GB_usb: Q4_K_M
+      256GB_usb: Q5_K_M
+    estimated_sizes:
+      Q4_K_M: 3.6
+      Q5_K_M: 4.4
+      Q8_0: 6.8
+    memory_requirements:
+      Q4_K_M: 4.0
+      Q5_K_M: 4.8
+      Q8_0: 7.5
+
+  mistral:7b:
+    base_size_gb: 8.0
+    parameters: "7B"
+    architecture: "mistral"
+    context_length: 32768
+    priority: optional
+    description: "Fast, good reasoning"
+    quantization_recommendations:
+      128GB_usb: Q4_K_M
+      256GB_usb: Q5_K_M
+    estimated_sizes:
+      Q4_K_M: 3.6
+      Q5_K_M: 4.4
+      Q8_0: 6.8
+    memory_requirements:
+      Q4_K_M: 4.0
+      Q5_K_M: 4.8
+      Q8_0: 7.5
+
+  codellama:7b:
+    base_size_gb: 8.0
+    parameters: "7B"
+    architecture: "llama2"
+    context_length: 16384
+    priority: optional
+    description: "Code-specialized model"
+    quantization_recommendations:
+      128GB_usb: Q4_K_M
+      256GB_usb: Q5_K_M
+    estimated_sizes:
+      Q4_K_M: 3.6
+      Q5_K_M: 4.4
+      Q8_0: 6.8
+    memory_requirements:
+      Q4_K_M: 4.0
+      Q5_K_M: 4.8
+      Q8_0: 7.5
+    inference_notes: |
+      - Optimized for code generation
+      - Good for programming assistance
+      - 16K context for large code files
+
+# USB Size Presets
+# Pre-computed optimal configurations for common USB sizes
+usb_presets:
+  128GB:
+    available_for_models: 118  # After reserved space
+    recommended_models:
+      - name: dolphin-llama3:8b
+        level: Q4_K_M
+        size: 3.8
+      - name: llama3.2:latest
+        level: Q5_K_M
+        size: 2.2
+      - name: qwen2.5:14b
+        level: Q4_K_M
+        size: 6.8
+    total_size: 12.8
+    remaining_space: 105.2
+    notes: |
+      - Primary model with good quality
+      - Lightweight fallback option
+      - Large model for complex tasks
+
+  256GB:
+    available_for_models: 246
+    recommended_models:
+      - name: dolphin-llama3:8b
+        level: Q5_K_M
+        size: 4.7
+      - name: llama3.2:8b
+        level: Q5_K_M
+        size: 4.7
+      - name: llama3.2:latest
+        level: Q8_0
+        size: 3.4
+      - name: qwen2.5:14b
+        level: Q5_K_M
+        size: 8.3
+      - name: mistral:7b
+        level: Q5_K_M
+        size: 4.4
+    total_size: 25.5
+    remaining_space: 220.5
+    notes: |
+      - Higher quality across all models
+      - Room for additional models
+      - Can add specialized models
+
+# Quality/Speed Tradeoff Reference
+quality_tradeoffs:
+  Q4_K_M:
+    perplexity_increase: "~0.5%"  # Compared to FP16
+    inference_speed: "fastest"
+    gpu_vram_ratio: 0.45
+    cpu_threads_recommended: 4
+    quality_impact: "Minimal for most tasks"
+
+  Q5_K_M:
+    perplexity_increase: "~0.25%"
+    inference_speed: "fast"
+    gpu_vram_ratio: 0.55
+    cpu_threads_recommended: 6
+    quality_impact: "Near-imperceptible"
+
+  Q8_0:
+    perplexity_increase: "~0.05%"
+    inference_speed: "moderate"
+    gpu_vram_ratio: 0.85
+    cpu_threads_recommended: 8
+    quality_impact: "Virtually identical to FP16"
+
+# System Requirements Reference
+system_requirements:
+  minimum:
+    ram_gb: 8
+    cpu_cores: 4
+    recommended_quant: Q4_K_M
+    models:
+      - llama3.2:latest
+
+  recommended:
+    ram_gb: 16
+    cpu_cores: 8
+    recommended_quant: Q5_K_M
+    models:
+      - dolphin-llama3:8b
+      - llama3.2:latest
+
+  optimal:
+    ram_gb: 32
+    cpu_cores: 12
+    gpu_vram_gb: 8
+    recommended_quant: Q8_0
+    models:
+      - dolphin-llama3:8b
+      - llama3.2:8b
+      - qwen2.5:14b
