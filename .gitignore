@@ -26,7 +26,16 @@ modules/webui-portable/app/
 modules/webui-portable/logs/
 modules/webui-portable/config/
 modules/ollama-portable/bin/
+modules/ollama-portable/lib/
 *.log
+
+# Logs directory
+logs/
+
+# Generated configs (runtime)
+modules/config/gpu_optimization.json
+modules/config/ollama_tuned.json
+.build_state.json
 
 # Secrets
 .webui_secret_key
